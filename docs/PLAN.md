@@ -2,7 +2,7 @@
 
 ## Stato
 - [x] **Fase 0**: repo, piano, CLAUDE.md, fixture reali e dataset aperture (2026-10-07)
-- [ ] **M0**: scaffold
+- [x] **M0**: scaffold (2026-10-06)
 - [ ] **M1**: import partite e prime statistiche
 - [ ] **M2**: motore e revisione partita
 - [ ] **M3**: repertorio ed explorer
