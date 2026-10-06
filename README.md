@@ -1,7 +1,7 @@
 # chess_app
 
 Web app personale (una PWA che gira tutta nel browser). Serve a due cose:
-- **analizzare con Stockfish** le partite giocate su Chess.com (AlePruner) e Lichess (MalVoluto);
+- **analizzare con Stockfish** le partite giocate su Chess.com e Lichess;
 - **imparare e sperimentare aperture**, con repertorio, ripetizione spaziata (FSRS) e feedback automatico dalle partite reali.
 
 **Stato:** in sviluppo.
