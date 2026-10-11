@@ -7,6 +7,7 @@ import { IMPORT_MONTHS_KEY, getSetting, setSetting } from '../db/settings'
 import type { Account } from '../db/schema'
 import type { Site } from '../import/types'
 import { PRESET_KEY, defaultPreset } from '../components/analysisStore'
+import { LichessSettings } from '../components/LichessSettings'
 import type { Preset } from '../analysis/analyzeGame'
 
 const PERIODS: { label: string; months: number | null }[] = [
@@ -108,6 +109,7 @@ function SettingsForm({ accounts }: { accounts: Account[] }) {
         <option value="veloce">Veloce</option>
         <option value="accurata">Accurata</option>
       </select>
+      <LichessSettings />
     </section>
   )
 }

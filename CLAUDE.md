@@ -66,6 +66,9 @@ Personal, local-first chess PWA for one user (the owner). It does two things:
   - **Requires `Authorization: Bearer <token>`**; without it the response is 401.
   - Get the token through Lichess OAuth2 PKCE: public client, no app registration, any unique `client_id`, S256, no scopes needed. As a fallback, the user pastes a personal token in Settings.
   - One request at a time; on a 429 wait 60 s; cache responses in IndexedDB.
+  - OAuth redirect URI is `<origin>/oauth` (page `src/pages/OAuth.tsx`); PKCE verifier/state live in `sessionStorage` until the callback. Token in the local `settings` table under `lichessToken`.
+  - Explorer and OAuth are tested only against mocks so far (Vitest + Playwright `page.route`); first live check on the previews.
+- Castling UCI: chessops and Lichess (cloud eval, explorer) use king-takes-rook (`e1h1`); Stockfish uses `e1g1`. chessops `parseUci`/`makeSan` accept both.
 - **Cloud eval**: `GET https://lichess.org/api/cloud-eval?fen=…&multiPv=3` works anonymously. A 404 means the position is not in the cache.
 - Lichess API spec: https://github.com/lichess-org/api (`doc/specs`).
 

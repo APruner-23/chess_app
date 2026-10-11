@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import type { Analysis, Color, Game, GameResult, Site, Speed } from '../import/types'
+import type { RepMove, Repertoire } from '../repertoire/types'
 
 /** One configured account per site. */
 export interface Account {
@@ -36,7 +37,19 @@ export interface Setting<T = unknown> {
   updatedAt: number
 }
 
+/** Cached HTTP responses (explorer, cloud eval). Local only. */
+export interface CacheEntry<T = unknown> {
+  key: string
+  /** null = the service had nothing (e.g. cloud eval 404). */
+  value: T | null
+  fetchedAt: number
+}
+
 export class ChessDb extends Dexie {
+  repertoires!: Table<Repertoire, string>
+  repMoves!: Table<RepMove, string>
+  explorerCache!: Table<CacheEntry, string>
+  evalCache!: Table<CacheEntry, string>
   accounts!: Table<Account, Site>
   games!: Table<Game, string>
   analyses!: Table<Analysis, string>
@@ -51,6 +64,12 @@ export class ChessDb extends Dexie {
       analyses: 'id',
       gamePositions: 'id, epd, gameId',
       settings: 'key',
+    })
+    this.version(2).stores({
+      repertoires: 'id',
+      repMoves: 'id, repertoireId, [repertoireId+fromEpd]',
+      explorerCache: 'key',
+      evalCache: 'key',
     })
   }
 }

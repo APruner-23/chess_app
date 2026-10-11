@@ -5,7 +5,7 @@
 - [x] **M0**: scaffold (2026-10-06)
 - [x] **M1**: import partite e prime statistiche (2026-10-11)
 - [x] **M2**: motore e revisione partita (2026-10-11)
-- [ ] **M3**: repertorio ed explorer
+- [x] **M3**: repertorio ed explorer (2026-10-11)
 - [ ] **M4**: allenamento FSRS
 - [ ] **M5**: feedback dalle partite e dashboard
 - [ ] **M6**: mobile, PWA, backup, pubblicazione
