@@ -92,6 +92,28 @@ describe('Engine', () => {
     expect(result.lines[0]!.eval).toEqual({ cp: 10 })
   })
 
+  it('falls back to the next build when the first one fails to start', async () => {
+    const broken: WorkerLike & { terminated?: boolean } = {
+      onmessage: null,
+      onerror: null,
+      postMessage() {
+        queueMicrotask(() => broken.onerror?.(new Error('wasm')))
+      },
+      terminate() {
+        broken.terminated = true
+      },
+    }
+    const fake = new FakeStockfish()
+    const engine = new Engine([
+      { create: () => broken, threads: 4 },
+      { create: () => fake, threads: 1 },
+    ])
+    const result = await engine.search({ fen: START, nodes: 10 })
+    expect(result.bestMove).toBe('e2e4')
+    expect(broken.terminated).toBe(true)
+    expect(fake.sent).toContain('setoption name Threads value 1')
+  })
+
   it('runs searches one at a time', async () => {
     const fake = new FakeStockfish()
     const engine = new Engine(() => fake)

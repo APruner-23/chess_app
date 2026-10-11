@@ -30,10 +30,10 @@ Personal, local-first chess PWA for one user (the owner). It does two things:
 - Board: `@lichess-org/chessground` 10.
 - Chess logic, FEN and PGN (with variations): `chessops` 0.15. Do not add chess.js.
 - Engine: `stockfish` 19 (npm, nmrugg).
-  - Use only the **lite** builds: `stockfish-19-lite.js/.wasm` (multi-thread, needs `crossOriginIsolated`), otherwise `stockfish-19-lite-single.js/.wasm`.
-  - `scripts/copy-engine.mjs` copies them from node_modules into `public/engine/` before dev and build.
+  - Use only the **lite single-threaded** build `stockfish-19-lite-single.js/.wasm` (decided 2026-10-12): the multi-threaded lite was ~30% faster but failed unpredictably to allocate its shared memory (after other engine instances, and offline from the service-worker cache), leaving no memory for a fallback. `Engine` still accepts a list of candidates with fallback.
+  - `scripts/copy-engine.mjs` copies it from node_modules into `public/engine/` before dev and build.
   - Never commit the ~94 MB full engines. The npm package itself is over 150 MB.
-  - Load with a plain `new Worker('/engine/<file>.js')`; it finds its `.wasm` by name. Verified in headless Chromium: lite multi-thread ~300k nps with 3 threads.
+  - Load with a plain `new Worker('/engine/<file>.js')`; it finds its `.wasm` by name. Verified in headless Chromium: ~245k nps, and it works offline from the PWA cache.
   - `src/engine/queue.ts` priorities: `live` (position on screen) > `game` (analysis the user asked for) > `background`; a more urgent job stops the running one, which is re-queued.
 - Storage: Dexie 4 + `dexie-react-hooks`.
 - Spaced repetition: `ts-fsrs` 5 (FSRS-6, `request_retention` 0.9).
@@ -41,8 +41,8 @@ Personal, local-first chess PWA for one user (the owner). It does two things:
 - Feedback (`src/feedback`): `compareGame` follows each game through the repertoires of the user's color and keeps the one followed longest. Items: `exit` (always, status `info`, used by the dashboard), plus `deviation`/`hole`/`extend` only for games played after the repertoire's `createdAt`. `processFeedback` recomputes everything and keeps the user's status. Line stats ignore games with fewer than 2 plies in book.
 - Pages are lazy-loaded (`src/components/navItems.ts`); the layout wraps the outlet in `Suspense`, so tests use `findByRole`.
 - `Board` re-syncs to its `fen` prop after every move, because chessground applies moves locally (a wrong training answer must snap back).
-- Charts: Recharts. PWA: `vite-plugin-pwa`. Tests: Vitest + `fake-indexeddb`.
-- COOP/COEP headers (`same-origin` / `require-corp`) go in `vite.config.ts` (dev and preview) and in `public/_headers` (Cloudflare Pages).
+- Charts: Recharts. PWA: `vite-plugin-pwa` (precaches everything incl. engine and openings, ~3.3 MB; icons in `public/icons`, rendered from `icon.svg` with headless Chromium). JSON backup: `src/db/backup.ts` (user tables only, merge by `updatedAt`, never the Lichess token). Deploy guide: `docs/DEPLOY.md`. Tests: Vitest + `fake-indexeddb`.
+- COOP/COEP headers (`same-origin` / `require-corp`; no longer required by the engine, kept for future multi-thread use) go in `vite.config.ts` (dev and preview) and in `public/_headers` (Cloudflare Pages).
 - License: GPL-3.0, because chessground, chessops and stockfish are GPL.
 
 ## Conventions

@@ -4,7 +4,14 @@ import { parseBestMove, parseInfo, type PvLine } from './uci'
 export interface WorkerLike {
   postMessage(message: string): void
   onmessage: ((e: { data: unknown }) => void) | null
+  onerror?: ((e: unknown) => void) | null
   terminate(): void
+}
+
+/** A way to start the engine; the first one that starts cleanly is used. */
+export interface EngineCandidate {
+  create: () => WorkerLike
+  threads?: number
 }
 
 export interface SearchRequest {
@@ -23,25 +30,50 @@ export interface SearchResult {
 
 /** One Stockfish worker speaking UCI. Searches run one at a time. */
 export class Engine {
-  private worker: WorkerLike
+  private worker!: WorkerLike
   private listeners = new Set<(line: string) => void>()
   private ready: Promise<void>
   private busy: Promise<unknown> = Promise.resolve()
 
-  constructor(createWorker: () => WorkerLike, options: { threads?: number; hashMb?: number } = {}) {
-    this.worker = createWorker()
-    this.worker.onmessage = (e) => {
-      for (const line of String(e.data).split('\n')) {
-        for (const l of this.listeners) l(line.trim())
+  constructor(
+    candidates: EngineCandidate[] | (() => WorkerLike),
+    options: { threads?: number; hashMb?: number } = {},
+  ) {
+    const list =
+      typeof candidates === 'function'
+        ? [{ create: candidates, threads: options.threads }]
+        : candidates
+    this.ready = this.start(list, options.hashMb)
+  }
+
+  /**
+   * Starts the first candidate that answers "uciok" without an error. The multi-threaded
+   * build can fail where the single-threaded one works (e.g. offline from the cache).
+   */
+  private async start(list: EngineCandidate[], hashMb?: number): Promise<void> {
+    for (const [i, candidate] of list.entries()) {
+      const worker = candidate.create()
+      this.worker = worker
+      worker.onmessage = (e) => {
+        for (const line of String(e.data).split('\n')) {
+          for (const l of this.listeners) l(line.trim())
+        }
       }
-    }
-    const worker = this.worker
-    this.ready = (async () => {
-      await this.command('uci', (l) => l === 'uciok')
-      if (options.threads) worker.postMessage(`setoption name Threads value ${options.threads}`)
-      if (options.hashMb) worker.postMessage(`setoption name Hash value ${options.hashMb}`)
+      const failed = new Promise<'failed'>((resolve) => {
+        worker.onerror = () => resolve('failed')
+      })
+      const started = this.command('uci', (l) => l === 'uciok').then(() => 'ok' as const)
+      if ((await Promise.race([started, failed])) === 'failed' && i < list.length - 1) {
+        worker.terminate()
+        this.listeners.clear()
+        continue
+      }
+      worker.onerror = null
+      if (candidate.threads) worker.postMessage(`setoption name Threads value ${candidate.threads}`)
+      if (hashMb) worker.postMessage(`setoption name Hash value ${hashMb}`)
       await this.command('isready', (l) => l === 'readyok')
-    })()
+      return
+    }
   }
 
   private command(cmd: string, done: (line: string) => boolean): Promise<void> {

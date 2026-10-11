@@ -7,12 +7,8 @@ import { fileURLToPath } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const src = join(root, 'node_modules', 'stockfish', 'bin')
 const dest = join(root, 'public', 'engine')
-const files = [
-  'stockfish-19-lite.js',
-  'stockfish-19-lite.wasm',
-  'stockfish-19-lite-single.js',
-  'stockfish-19-lite-single.wasm',
-]
+// Only the single-threaded lite build is used (see src/engine/instance.ts).
+const files = ['stockfish-19-lite-single.js', 'stockfish-19-lite-single.wasm']
 
 mkdirSync(dest, { recursive: true })
 for (const file of files) {

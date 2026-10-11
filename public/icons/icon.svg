@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#1c1917"/>
+  <g transform="translate(96 96)">
+    <rect width="80" height="80" fill="#f0d9b5"/><rect x="80" width="80" height="80" fill="#b58863"/>
+    <rect x="160" width="80" height="80" fill="#f0d9b5"/><rect x="240" width="80" height="80" fill="#b58863"/>
+    <rect y="80" width="80" height="80" fill="#b58863"/><rect x="80" y="80" width="80" height="80" fill="#f0d9b5"/>
+    <rect x="160" y="80" width="80" height="80" fill="#b58863"/><rect x="240" y="80" width="80" height="80" fill="#f0d9b5"/>
+    <rect y="160" width="80" height="80" fill="#f0d9b5"/><rect x="80" y="160" width="80" height="80" fill="#b58863"/>
+    <rect x="160" y="160" width="80" height="80" fill="#f0d9b5"/><rect x="240" y="160" width="80" height="80" fill="#b58863"/>
+    <rect y="240" width="80" height="80" fill="#b58863"/><rect x="80" y="240" width="80" height="80" fill="#f0d9b5"/>
+    <rect x="160" y="240" width="80" height="80" fill="#b58863"/><rect x="240" y="240" width="80" height="80" fill="#f0d9b5"/>
+  </g>
+  <text x="256" y="345" font-size="300" text-anchor="middle" font-family="DejaVu Sans, sans-serif" fill="#10b981" stroke="#1c1917" stroke-width="10" paint-order="stroke">♞</text>
+</svg>

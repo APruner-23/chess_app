@@ -27,8 +27,8 @@ export function Layout() {
         </Suspense>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 grid grid-cols-6 border-t border-stone-800 bg-stone-900 md:hidden">
-        {navItems.map(({ path, label, icon }) => (
+      <nav className="fixed inset-x-0 bottom-0 grid grid-cols-6 border-t border-stone-800 bg-stone-900 pb-[env(safe-area-inset-bottom)] md:hidden">
+        {navItems.map(({ path, label, short, icon }) => (
           <NavLink
             key={path}
             to={path}
@@ -39,7 +39,7 @@ export function Layout() {
             }
           >
             <span className="text-xl leading-none">{icon}</span>
-            {label}
+            <span className="max-w-full truncate px-0.5">{short}</span>
           </NavLink>
         ))}
       </nav>

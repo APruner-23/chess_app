@@ -8,7 +8,7 @@
 - [x] **M3**: repertorio ed explorer (2026-10-11)
 - [x] **M4**: allenamento FSRS (2026-10-12)
 - [x] **M5**: feedback dalle partite e dashboard (2026-10-12)
-- [ ] **M6**: mobile, PWA, backup, pubblicazione
+- [x] **M6**: mobile, PWA, backup (2026-10-12); pubblicazione pronta, in attesa dell'account Cloudflare (docs/DEPLOY.md)
 
 ## Contesto
 È una web app personale per due cose: **analizzare le partite** giocate su Lichess e Chess.com, e **imparare e sperimentare aperture** con un metodo che abbia senso. Le decisioni prese:

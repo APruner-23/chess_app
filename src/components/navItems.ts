@@ -17,16 +17,25 @@ export const OAuth = page(() => import('../pages/OAuth'), 'OAuth')
 export interface NavItem {
   path: string
   label: string
+  /** Shorter label for the phone bottom bar. */
+  short: string
   icon: string
   Page: ComponentType
 }
 
 /** Main sections of the app, in navigation order. */
 export const navItems: NavItem[] = [
-  { path: '/', label: 'Dashboard', icon: '♔', Page: Dashboard },
-  { path: '/partite', label: 'Partite', icon: '♟', Page: Partite },
-  { path: '/repertori', label: 'Repertori', icon: '♘', Page: Repertori },
-  { path: '/allenamento', label: 'Allenamento', icon: '♗', Page: Allenamento },
-  { path: '/feedback', label: 'Feedback', icon: '♖', Page: Feedback },
-  { path: '/impostazioni', label: 'Impostazioni', icon: '⚙', Page: Impostazioni },
+  { path: '/', label: 'Dashboard', short: 'Home', icon: '♔', Page: Dashboard },
+  { path: '/partite', label: 'Partite', short: 'Partite', icon: '♟', Page: Partite },
+  { path: '/repertori', label: 'Repertori', short: 'Repertori', icon: '♘', Page: Repertori },
+  { path: '/allenamento', label: 'Allenamento', short: 'Allena', icon: '♗', Page: Allenamento },
+  { path: '/feedback', label: 'Feedback', short: 'Feedback', icon: '♖', Page: Feedback },
+  // U+FE0E asks for the text glyph, not the colored emoji.
+  {
+    path: '/impostazioni',
+    label: 'Impostazioni',
+    short: 'Opzioni',
+    icon: '⚙\uFE0E',
+    Page: Impostazioni,
+  },
 ]

@@ -104,7 +104,7 @@ function RepertoireEditor({ rep }: { rep: Repertoire }) {
               updatedAt: Date.now(),
             })
           }
-          className="min-w-0 flex-1 rounded bg-transparent px-1 text-xl font-semibold hover:bg-stone-800 focus:bg-stone-800"
+          className="order-first min-w-0 basis-full rounded bg-transparent px-1 text-xl font-semibold hover:bg-stone-800 focus:bg-stone-800 sm:order-none sm:basis-auto sm:flex-1"
           aria-label="Nome del repertorio"
         />
         <span className="text-sm text-stone-400">{rep.color === 'white' ? 'Bianco' : 'Nero'}</span>
