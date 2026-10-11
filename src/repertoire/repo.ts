@@ -1,4 +1,10 @@
 import type { ChessDb } from '../db/schema'
+
+/** Remembers deletions so the sync can propagate them. */
+async function tombstone(db: ChessDb, tbl: string, ids: string[]) {
+  const now = Date.now()
+  await db.tombstones.bulkPut(ids.map((id) => ({ key: `${tbl}|${id}`, tbl, id, updatedAt: now })))
+}
 import { RepGraph, makeRepMove } from './graph'
 import type { RepMove, Repertoire } from './types'
 
@@ -21,9 +27,12 @@ export async function createRepertoire(
 }
 
 export async function deleteRepertoire(db: ChessDb, repertoireId: string) {
-  await db.transaction('rw', db.repertoires, db.repMoves, async () => {
-    await db.repMoves.where('repertoireId').equals(repertoireId).delete()
+  await db.transaction('rw', db.repertoires, db.repMoves, db.tombstones, async () => {
+    const moveIds = await db.repMoves.where('repertoireId').equals(repertoireId).primaryKeys()
+    await db.repMoves.bulkDelete(moveIds)
     await db.repertoires.delete(repertoireId)
+    await tombstone(db, 'repMoves', moveIds)
+    await tombstone(db, 'repertoires', [repertoireId])
   })
 }
 
@@ -74,10 +83,12 @@ export async function mergeMoves(
 
 /** Deletes a move and everything that is no longer reachable without it. */
 export async function deleteMove(db: ChessDb, move: RepMove): Promise<void> {
-  await db.transaction('rw', db.repMoves, db.repertoires, async () => {
+  await db.transaction('rw', db.repMoves, db.repertoires, db.tombstones, async () => {
     await db.repMoves.delete(move.id)
     const graph = new RepGraph(await loadMoves(db, move.repertoireId))
-    await db.repMoves.bulkDelete(graph.orphans().map((m) => m.id))
+    const orphans = graph.orphans().map((m) => m.id)
+    await db.repMoves.bulkDelete(orphans)
+    await tombstone(db, 'repMoves', [move.id, ...orphans])
     await touch(db, move.repertoireId)
   })
 }

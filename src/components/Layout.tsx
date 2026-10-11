@@ -1,7 +1,8 @@
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import { navItems } from './navItems'
 import { UpdateBanner } from './UpdateBanner'
+import { startAutoSync } from './syncStore'
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
@@ -10,6 +11,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 
 /** App shell: sidebar on desktop, bottom bar on phones, page content in the middle. */
 export function Layout() {
+  useEffect(() => startAutoSync(), [])
   return (
     <div className="flex min-h-dvh">
       <nav className="hidden w-52 shrink-0 flex-col gap-1 border-r border-stone-800 p-3 md:flex">

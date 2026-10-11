@@ -47,7 +47,17 @@ export interface CacheEntry<T = unknown> {
   fetchedAt: number
 }
 
+/** A deleted user record, kept so the deletion can reach other devices. */
+export interface Tombstone {
+  /** `<table>|<id>` */
+  key: string
+  tbl: string
+  id: string
+  updatedAt: number
+}
+
 export class ChessDb extends Dexie {
+  tombstones!: Table<Tombstone, string>
   repertoires!: Table<Repertoire, string>
   repMoves!: Table<RepMove, string>
   explorerCache!: Table<CacheEntry, string>
@@ -82,6 +92,9 @@ export class ChessDb extends Dexie {
     })
     this.version(4).stores({
       feedback: 'id, gameId, repertoireId, status',
+    })
+    this.version(5).stores({
+      tombstones: 'key',
     })
   }
 }

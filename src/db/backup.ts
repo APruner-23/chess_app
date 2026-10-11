@@ -1,5 +1,5 @@
 import type { ChessDb } from './schema'
-import { TOKEN_KEY } from '../lichess/oauth'
+import { DEVICE_SETTINGS } from '../sync/sync'
 import { replaySan } from '../chess/position'
 import { gamePositions } from '../import/positions'
 import type { Game } from '../import/types'
@@ -19,7 +19,7 @@ export const BACKUP_TABLES = [
 type BackupTable = (typeof BACKUP_TABLES)[number]
 
 /** Never leaves the device. */
-const PRIVATE_SETTINGS = new Set([TOKEN_KEY])
+const PRIVATE_SETTINGS = DEVICE_SETTINGS
 
 export interface Backup {
   app: 'chess_app'

@@ -6,6 +6,7 @@ import type { Site } from '../import/types'
 import { loadOpenings } from '../openings/load'
 import { withDefaults } from './accounts'
 import { processFeedback } from '../feedback/repo'
+import { useSyncStore } from './syncStore'
 
 interface SiteStatus {
   step: string
@@ -63,5 +64,6 @@ export const useImportStore = create<ImportState>((set, get) => ({
     // New games may bring new feedback against the repertoires.
     await processFeedback(db).catch(() => undefined)
     set({ running: false })
+    void useSyncStore.getState().run()
   },
 }))

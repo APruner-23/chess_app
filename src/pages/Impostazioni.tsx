@@ -9,6 +9,7 @@ import type { Site } from '../import/types'
 import { PRESET_KEY, defaultPreset } from '../components/analysisStore'
 import { LichessSettings } from '../components/LichessSettings'
 import { BackupSettings } from '../components/BackupSettings'
+import { SyncSettings } from '../components/SyncSettings'
 import { DEFAULT_NEW_PER_DAY, NEW_PER_DAY_KEY } from '../training/repo'
 import type { Preset } from '../analysis/analyzeGame'
 
@@ -128,6 +129,7 @@ function SettingsForm({ accounts }: { accounts: Account[] }) {
       </label>
 
       <LichessSettings />
+      <SyncSettings />
       <BackupSettings />
     </section>
   )

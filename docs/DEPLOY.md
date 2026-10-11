@@ -28,3 +28,13 @@ Da quel momento ogni push su `main` aggiorna il sito da solo.
 
 ## Dati e backup
 I dati restano nel browser di ogni dispositivo. Per portarli dal PC al telefono: **Impostazioni → Esporta backup** su uno e **Importa backup** sull'altro. Per ogni elemento vince la versione più recente; il token di Lichess non è mai nel file.
+
+## Sincronizzazione PC ↔ telefono (Cloudflare D1, gratuita)
+Il Worker contiene anche un piccolo servizio di sincronizzazione con un database D1 (`chess-app-sync`), che viene creato da solo al primo deploy.
+
+Una volta sola:
+1. Nel pannello Cloudflare apri il Worker **chess-app** → **Settings** → **Variables and Secrets** → **Add**.
+2. Tipo **Secret**, nome `SYNC_KEY`, valore: una frase lunga che inventi tu (è la password della sincronizzazione). Salva.
+3. Su ogni dispositivo: **Impostazioni → Sincronizzazione**, incolla la stessa frase e premi **Attiva**.
+
+Poi la sincronizzazione parte da sola: all'apertura, quando torni sull'app, ogni 3 minuti e dopo ogni import. Il token di Lichess e la chiave restano sul dispositivo.
