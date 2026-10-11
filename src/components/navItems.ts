@@ -1,8 +1,27 @@
 import { lazy, type ComponentType } from 'react'
 
+const RELOADED = 'chunkReload'
+
+/**
+ * After a deploy, a tab still running the old version asks for old chunk files that
+ * no longer exist. Reload once to pick up the new version instead of failing.
+ */
+function reloadOnce(error: unknown): never {
+  if (!sessionStorage.getItem(RELOADED)) {
+    sessionStorage.setItem(RELOADED, '1')
+    location.reload()
+  }
+  throw error
+}
+
 /** Each page is its own chunk: the first load on a phone only fetches the shell. */
 const page = <K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) =>
-  lazy(() => load().then((m) => ({ default: m[name] })))
+  lazy(() =>
+    load().then((m) => {
+      sessionStorage.removeItem(RELOADED)
+      return { default: m[name] }
+    }, reloadOnce),
+  )
 
 export const Dashboard = page(() => import('../pages/Dashboard'), 'Dashboard')
 export const Partite = page(() => import('../pages/Partite'), 'Partite')
