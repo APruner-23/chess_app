@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint . && prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "build-openings": "node scripts/build-openings.ts"
   },
   "dependencies": {
     "@lichess-org/chessground": "^10.1.1",

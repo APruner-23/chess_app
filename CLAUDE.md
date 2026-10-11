@@ -54,6 +54,7 @@ Personal, local-first chess PWA for one user (the owner). It does two things:
   - Endpoint: `GET https://lichess.org/api/games/user/{user}?since=&max=&opening=true&evals=true&accuracy=true&clocks=true&pgnInJson=true`, with header `Accept: application/x-ndjson`.
   - Works anonymously (20 games/s) and allows CORS.
   - From a shell, curl's default User-Agent gets a 404: send a browser-like UA.
+  - `clocks` (centiseconds, after each ply) has one extra trailing entry when the game ends by resignation or timeout; `normalizeLichess` trims it.
 - **Chess.com**
   - `GET https://api.chess.com/pub/player/{user}/games/archives`, then fetch each monthly URL. CORS is `*`.
   - Requests must be strictly **serial**: parallel requests get a 429.
@@ -90,11 +91,13 @@ For reference, see `WinPercent`, `AccuracyPercent` and `Advice` in github.com/li
   - `alepruner-2026-09.json` — 87 games, 35 of them with `accuracies`.
   - `alepruner-archives.json`, `alepruner-stats.json`.
 - `data/chess-openings/{a..e}.tsv` — the lichess-org/chess-openings dataset (CC0; columns `eco`, `name`, `pgn`).
-  - `scripts/build-openings.ts` turns it into an EPD → {eco, name} map.
+  - `npm run build-openings` (`scripts/build-openings.ts`) turns it into `src/openings/openings.json`, an EPD → {eco, name} map. The JSON is committed and lazy-loaded as its own chunk.
   - A game is classified by the deepest match along its moves.
 
 ## Commands (available after M0)
-`npm run dev` · `npm run build` · `npm run preview` · `npm test` · `npm run lint`
+`npm run dev` · `npm run build` · `npm run preview` · `npm test` · `npm run lint` · `npm run build-openings`
+
+Tests are typechecked through `tsconfig.test.json` (Node types allowed there, not in `src`). A headless Chromium smoke test can mock the APIs with Playwright `page.route` and the fixtures; Playwright is installed globally (`npm root -g`), not in the project.
 
 ## Cloud environment notes
 - The network may be restricted: npm and GitHub should work, lichess.org and api.chess.com may not. Live API checks happen on the previews the user chooses at the end of M1, unless those domains are allowlisted.
