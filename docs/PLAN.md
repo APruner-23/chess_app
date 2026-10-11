@@ -7,7 +7,7 @@
 - [x] **M2**: motore e revisione partita (2026-10-11)
 - [x] **M3**: repertorio ed explorer (2026-10-11)
 - [x] **M4**: allenamento FSRS (2026-10-12)
-- [ ] **M5**: feedback dalle partite e dashboard
+- [x] **M5**: feedback dalle partite e dashboard (2026-10-12)
 - [ ] **M6**: mobile, PWA, backup, pubblicazione
 
 ## Contesto

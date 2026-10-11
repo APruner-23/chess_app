@@ -11,9 +11,9 @@ function renderAt(path: string) {
 }
 
 describe('app shell', () => {
-  it.each(navItems)('renders the $label page at $path', ({ path, label }) => {
+  it.each(navItems)('renders the $label page at $path', async ({ path, label }) => {
     renderAt(path)
-    expect(screen.getByRole('heading', { level: 1, name: label })).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 1, name: label })).toBeTruthy()
   })
 
   it('shows a not-found page for unknown paths', () => {

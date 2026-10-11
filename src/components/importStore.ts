@@ -5,6 +5,7 @@ import { importAccount, type ImportProgress } from '../import/sync'
 import type { Site } from '../import/types'
 import { loadOpenings } from '../openings/load'
 import { withDefaults } from './accounts'
+import { processFeedback } from '../feedback/repo'
 
 interface SiteStatus {
   step: string
@@ -59,6 +60,8 @@ export const useImportStore = create<ImportState>((set, get) => ({
         if (aborted) break
       }
     }
+    // New games may bring new feedback against the repertoires.
+    await processFeedback(db).catch(() => undefined)
     set({ running: false })
   },
 }))

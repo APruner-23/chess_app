@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import { navItems } from './navItems'
 
@@ -21,7 +22,9 @@ export function Layout() {
       </nav>
 
       <main className="min-w-0 flex-1 p-4 pb-20 md:p-6 md:pb-6">
-        <Outlet />
+        <Suspense fallback={<p className="text-stone-500">Carico…</p>}>
+          <Outlet />
+        </Suspense>
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 grid grid-cols-6 border-t border-stone-800 bg-stone-900 md:hidden">

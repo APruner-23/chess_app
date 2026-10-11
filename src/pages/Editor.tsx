@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { parseUci } from 'chessops'
 import { makeSan } from 'chessops/san'
@@ -37,7 +37,17 @@ function RepertoireEditor({ rep }: { rep: Repertoire }) {
   const moves = useLiveQuery(() => loadMoves(db, rep.id), [rep.id])
   const graph = useMemo(() => new RepGraph(moves ?? []), [moves])
   /** Current line from the start, in SAN: it may go beyond the repertoire. */
-  const [path, setPath] = useState<string[]>([])
+  const [params] = useSearchParams()
+  // "?linea=e4,e5,Nf3" opens the editor on that line (links from Feedback).
+  const [path, setPath] = useState<string[]>(() => {
+    const sans = params.get('linea')?.split(',').filter(Boolean) ?? []
+    try {
+      replaySan(sans)
+      return sans
+    } catch {
+      return []
+    }
+  })
   const [best, setBest] = useState<string>()
   const [showImport, setShowImport] = useState(false)
   const replay = useMemo(() => replaySan(path), [path])

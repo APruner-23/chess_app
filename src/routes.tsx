@@ -1,10 +1,7 @@
 import type { RouteObject } from 'react-router'
 import { Layout } from './components/Layout'
-import { navItems } from './components/navItems'
+import { Editor, OAuth, Partita, navItems } from './components/navItems'
 import { NotFound } from './pages/NotFound'
-import { Partita } from './pages/Partita'
-import { Editor } from './pages/Editor'
-import { OAuth } from './pages/OAuth'
 
 export const routes: RouteObject[] = [
   {

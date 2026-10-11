@@ -81,3 +81,34 @@ describe('training storage', () => {
     expect(await db.cards.count()).toBe(0)
   })
 })
+
+describe('feedback storage', () => {
+  it('keeps the user decision across reprocessing and drops stale items', async () => {
+    const { processFeedback, ignore } = await import('../../src/feedback/repo')
+    const { normalizeLichess } = await import('../../src/import/lichess')
+    const { ndjsonLines } = await import('../helpers')
+    const raw = ndjsonLines<import('../../src/import/lichess').LichessGame>(
+      'lichess/malvoluto-recent.ndjson',
+    )[0]!
+    const { game } = normalizeLichess(raw, 'MalVoluto')!
+    await db.games.put(game)
+    const rep = await createRepertoire(db, {
+      name: 'N',
+      color: game.userColor,
+      experimental: false,
+    })
+    await db.repertoires.update(rep.id, { createdAt: 0 })
+    // The repertoire expects a different first opponent move: a hole on ply 0.
+    await addLine(db, rep.id, INITIAL_EPD, [game.moves[0] === 'd4' ? 'e4' : 'd4'])
+    expect(await processFeedback(db)).toBe(1)
+    const hole = (await db.feedback.where('status').equals('open').toArray())[0]!
+    expect(hole.kind).toBe('hole')
+    await ignore(db, [hole])
+    expect(await processFeedback(db)).toBe(0)
+    expect((await db.feedback.get(hole.id))!.status).toBe('ignored')
+    // Once the move is prepared, the hole disappears.
+    await addLine(db, rep.id, INITIAL_EPD, [game.moves[0]!])
+    await processFeedback(db)
+    expect(await db.feedback.get(hole.id)).toBeUndefined()
+  })
+})
