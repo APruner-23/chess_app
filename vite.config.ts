@@ -16,7 +16,10 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // A new version waits until the app is reopened or the user taps "Aggiorna":
+      // activating it mid-session dropped the old chunks under the running page.
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: ['icons/apple-touch-icon.png', 'icons/icon.svg'],
       manifest: {
         name: 'chess_app — partite e aperture',
@@ -44,6 +47,8 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
+        // The first service worker takes over the page right away; later ones wait.
+        clientsClaim: true,
       },
     }),
   ],
