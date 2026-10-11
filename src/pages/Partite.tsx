@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { PageHeader } from '../components/PageHeader'
 import { ImportPanel } from '../components/ImportPanel'
+import { BackgroundAnalysisPanel } from '../components/BackgroundAnalysisPanel'
 import { SITE_LABELS } from '../components/accounts'
 import { RESULT_COLORS, RESULT_LABELS, SPEED_LABELS, formatDate } from '../components/format'
 import { db } from '../db/schema'
@@ -60,6 +61,7 @@ export function Partite() {
     <>
       <PageHeader title="Partite" />
       <ImportPanel />
+      <BackgroundAnalysisPanel />
 
       <div className="mb-4 flex flex-wrap gap-2">
         {select('site', 'Sito', SITE_LABELS)}

@@ -33,6 +33,8 @@ Personal, local-first chess PWA for one user (the owner). It does two things:
   - Use only the **lite** builds: `stockfish-19-lite.js/.wasm` (multi-thread, needs `crossOriginIsolated`), otherwise `stockfish-19-lite-single.js/.wasm`.
   - `scripts/copy-engine.mjs` copies them from node_modules into `public/engine/` before dev and build.
   - Never commit the ~94 MB full engines. The npm package itself is over 150 MB.
+  - Load with a plain `new Worker('/engine/<file>.js')`; it finds its `.wasm` by name. Verified in headless Chromium: lite multi-thread ~300k nps with 3 threads.
+  - `src/engine/queue.ts` priorities: `live` (position on screen) > `game` (analysis the user asked for) > `background`; a more urgent job stops the running one, which is re-queued.
 - Storage: Dexie 4 + `dexie-react-hooks`.
 - Spaced repetition: `ts-fsrs` 5 (FSRS-6, `request_retention` 0.9).
 - Charts: Recharts. PWA: `vite-plugin-pwa`. Tests: Vitest + `fake-indexeddb`.
@@ -80,6 +82,11 @@ For reference, see `WinPercent`, `AccuracyPercent` and `Advice` in github.com/li
   - The eval list starts with the initial position (lila `Cp.initial`).
 - Judgments use the mover's drop in winning chances (−1…1 scale): ≥0.1 inaccuracy, ≥0.2 mistake, ≥0.3 blunder. That is 5/10/15 win% points. Mate-related advice is handled separately.
 - In the Lichess export, `analysis[i]` is the eval **after** ply i+1 (White's point of view). Judged plies also carry `best`, `variation` and `judgment`.
+- Findings from the cross-check (2026-10-11), implemented in `src/analysis`:
+  - Lichess only judges plies that carry a server `variation`/`best`; `judgeMoves` takes a `judged(ply)` filter, used for Lichess evals.
+  - CpAdvice does **not** clamp cp to ±1000 (a +5764 eval is judged as a blunder); accuracy does clamp.
+  - When a game ends in checkmate, Lichess has no eval for the final position (n−1 evals); `analyzeGame` does the same.
+  - Game `1FaVySeC` (37 mate evals) gives White 51.3 vs Lichess 54; every other game matches within ±0.3. Unexplained, tolerated in the test.
 - **Cross-check test**: for the games in `tests/fixtures/lichess/malvoluto-analysed.ndjson`, recomputing from `analysis` must reproduce `players.{white,black}.analysis`: accuracy within ±1, and the same inaccuracy/mistake/blunder counts.
 
 ## Fixtures & data

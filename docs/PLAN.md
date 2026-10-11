@@ -4,7 +4,7 @@
 - [x] **Fase 0**: repo, piano, CLAUDE.md, fixture reali e dataset aperture (2026-10-07)
 - [x] **M0**: scaffold (2026-10-06)
 - [x] **M1**: import partite e prime statistiche (2026-10-11)
-- [ ] **M2**: motore e revisione partita
+- [x] **M2**: motore e revisione partita (2026-10-11)
 - [ ] **M3**: repertorio ed explorer
 - [ ] **M4**: allenamento FSRS
 - [ ] **M5**: feedback dalle partite e dashboard
@@ -124,7 +124,7 @@ Per ogni milestone il ciclo è sempre lo stesso: codice, test verdi, commit, pus
 - Vengono importate solo le partite standard.
 - Classificazione delle aperture e indice `gamePositions`.
 - Pagina Partite con filtri, visualizzatore semplice e **statistiche per apertura senza motore** (V/P/S per apertura, colore e cadenza).
-- *A fine M1 l'utente decide come vedere le anteprime (Cloudflare Pages o in locale).*
+- *A fine M1 l'utente decide come vedere le anteprime (Cloudflare Pages o in locale).* → Rimandato: per ora solo test e prove headless (2026-10-11).
 
 **M2 – Motore e revisione partita**
 - Worker Stockfish con parser UCI e coda a priorità.

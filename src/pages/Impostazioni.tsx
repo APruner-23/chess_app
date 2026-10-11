@@ -6,6 +6,8 @@ import { db } from '../db/schema'
 import { IMPORT_MONTHS_KEY, getSetting, setSetting } from '../db/settings'
 import type { Account } from '../db/schema'
 import type { Site } from '../import/types'
+import { PRESET_KEY, defaultPreset } from '../components/analysisStore'
+import type { Preset } from '../analysis/analyzeGame'
 
 const PERIODS: { label: string; months: number | null }[] = [
   { label: 'Tutte le partite', months: null },
@@ -27,6 +29,7 @@ export function Impostazioni() {
 
 function SettingsForm({ accounts }: { accounts: Account[] }) {
   const months = useLiveQuery(() => getSetting<number | null>(db, IMPORT_MONTHS_KEY, null))
+  const preset = useLiveQuery(() => getSetting<Preset>(db, PRESET_KEY, defaultPreset()))
   const [names, setNames] = useState<Partial<Record<Site, string>>>(() =>
     Object.fromEntries(accounts.map((a) => [a.id, a.username])),
   )
@@ -90,6 +93,20 @@ function SettingsForm({ accounts }: { accounts: Account[] }) {
             {p.label}
           </option>
         ))}
+      </select>
+
+      <h2 className="pt-4 text-lg font-medium">Analisi col motore</h2>
+      <p className="text-sm text-stone-400">
+        Nodi per posizione: “veloce” (150 mila) consuma meno batteria, “accurata” (600 mila) è più
+        precisa. Le partite già analizzate su Lichess usano l'analisi di Lichess.
+      </p>
+      <select
+        value={preset ?? ''}
+        onChange={(e) => setSetting(db, PRESET_KEY, e.target.value as Preset)}
+        className="block w-full rounded-md border border-stone-700 bg-stone-950 px-3 py-2"
+      >
+        <option value="veloce">Veloce</option>
+        <option value="accurata">Accurata</option>
       </select>
     </section>
   )

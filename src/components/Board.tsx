@@ -11,10 +11,12 @@ interface BoardProps {
   orientation?: 'white' | 'black'
   /** Last move in UCI ("e2e4"), highlighted on the board. */
   lastMove?: string
+  /** Arrows to draw, as UCI moves (e.g. the engine's best move). */
+  arrows?: string[]
 }
 
 /** Read-only board built on Lichess' chessground. Interactive moves arrive in M3. */
-export function Board({ fen, orientation = 'white', lastMove }: BoardProps) {
+export function Board({ fen, orientation = 'white', lastMove, arrows }: BoardProps) {
   const el = useRef<HTMLDivElement>(null)
   const api = useRef<Api | null>(null)
 
@@ -30,6 +32,19 @@ export function Board({ fen, orientation = 'white', lastMove }: BoardProps) {
       lastMove: lastMove ? [lastMove.slice(0, 2) as Key, lastMove.slice(2, 4) as Key] : undefined,
     })
   }, [fen, orientation, lastMove])
+
+  const arrowKey = arrows?.join(',') ?? ''
+  useEffect(() => {
+    api.current?.setAutoShapes(
+      arrowKey
+        ? arrowKey.split(',').map((uci, i) => ({
+            orig: uci.slice(0, 2) as Key,
+            dest: uci.slice(2, 4) as Key,
+            brush: i === 0 ? 'paleBlue' : 'paleGrey',
+          }))
+        : [],
+    )
+  }, [arrowKey, fen])
 
   return (
     <div className="aspect-square w-full">
