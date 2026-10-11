@@ -30,7 +30,7 @@ export function Allenamento() {
   }))
   const [now] = useState(() => Date.now())
 
-  if (!data) return null
+  if (!data) return <PageHeader title="Allenamento" />
   const stats = trainingStats(data.cards, data.logs, now)
   const newLimit = Math.max(0, data.newPerDay - stats.introducedToday)
 
