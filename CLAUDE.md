@@ -37,6 +37,8 @@ Personal, local-first chess PWA for one user (the owner). It does two things:
   - `src/engine/queue.ts` priorities: `live` (position on screen) > `game` (analysis the user asked for) > `background`; a more urgent job stops the running one, which is re-queued.
 - Storage: Dexie 4 + `dexie-react-hooks`.
 - Spaced repetition: `ts-fsrs` 5 (FSRS-6, `request_retention` 0.9).
+- Training (`src/training`): a card is `<repertoireId>|<epd>` for a user-to-move position with its main move; `syncAllCards` re-derives cards from the repertoire (changed main move → reset). FSRS state is stored as plain numbers (`StoredFsrs`). Due cards are grouped into lines from the start (`buildLines`): the app auto-plays the rest. "Difficili" is practice only (no scheduling, no log).
+- `Board` re-syncs to its `fen` prop after every move, because chessground applies moves locally (a wrong training answer must snap back).
 - Charts: Recharts. PWA: `vite-plugin-pwa`. Tests: Vitest + `fake-indexeddb`.
 - COOP/COEP headers (`same-origin` / `require-corp`) go in `vite.config.ts` (dev and preview) and in `public/_headers` (Cloudflare Pages).
 - License: GPL-3.0, because chessground, chessops and stockfish are GPL.

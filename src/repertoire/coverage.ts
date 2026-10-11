@@ -98,3 +98,38 @@ export function coverage(
     missing: [...missing],
   }
 }
+
+/**
+ * Probability of reaching each user position when following the repertoire (used to
+ * introduce the most likely positions first). Without explorer data the opponent's
+ * prepared moves are treated as equally likely.
+ */
+export function reachProbabilities(
+  graph: RepGraph,
+  color: Color,
+  freqs: FreqLookup,
+  maxPly = 30,
+  root = INITIAL_EPD,
+): Map<string, number> {
+  const reach = new Map<string, number>()
+  const walk = (epd: string, p: number, ply: number, seen: Set<string>) => {
+    if (ply > maxPly || p < 1e-9 || seen.has(epd)) return
+    const children = graph.children(epd)
+    if (children.length === 0) return
+    const nextSeen = new Set(seen).add(epd)
+    if (turnOf(epd) === color) {
+      reach.set(epd, (reach.get(epd) ?? 0) + p)
+      walk(children[0]!.toEpd, p, ply + 1, nextSeen)
+      return
+    }
+    const known = freqs(epd)
+    const total = known?.reduce((a, f) => a + f.games, 0) ?? 0
+    for (const c of children) {
+      const games = known?.find((f) => f.san === c.san)?.games
+      const share = known && total ? (games ?? 0) / total : 1 / children.length
+      walk(c.toEpd, p * share, ply + 1, nextSeen)
+    }
+  }
+  walk(root, 1, 0, new Set())
+  return reach
+}

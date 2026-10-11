@@ -8,6 +8,7 @@ import type { Account } from '../db/schema'
 import type { Site } from '../import/types'
 import { PRESET_KEY, defaultPreset } from '../components/analysisStore'
 import { LichessSettings } from '../components/LichessSettings'
+import { DEFAULT_NEW_PER_DAY, NEW_PER_DAY_KEY } from '../training/repo'
 import type { Preset } from '../analysis/analyzeGame'
 
 const PERIODS: { label: string; months: number | null }[] = [
@@ -31,6 +32,7 @@ export function Impostazioni() {
 function SettingsForm({ accounts }: { accounts: Account[] }) {
   const months = useLiveQuery(() => getSetting<number | null>(db, IMPORT_MONTHS_KEY, null))
   const preset = useLiveQuery(() => getSetting<Preset>(db, PRESET_KEY, defaultPreset()))
+  const newPerDay = useLiveQuery(() => getSetting(db, NEW_PER_DAY_KEY, DEFAULT_NEW_PER_DAY))
   const [names, setNames] = useState<Partial<Record<Site, string>>>(() =>
     Object.fromEntries(accounts.map((a) => [a.id, a.username])),
   )
@@ -109,6 +111,21 @@ function SettingsForm({ accounts }: { accounts: Account[] }) {
         <option value="veloce">Veloce</option>
         <option value="accurata">Accurata</option>
       </select>
+      <h2 className="pt-4 text-lg font-medium">Allenamento</h2>
+      <label className="flex items-center gap-3 text-sm">
+        Posizioni nuove al giorno
+        <input
+          type="number"
+          min={0}
+          max={50}
+          value={newPerDay ?? DEFAULT_NEW_PER_DAY}
+          onChange={(e) =>
+            setSetting(db, NEW_PER_DAY_KEY, Math.max(0, Number(e.target.value) || 0))
+          }
+          className="w-20 rounded-md border border-stone-700 bg-stone-950 px-2 py-1"
+        />
+      </label>
+
       <LichessSettings />
     </section>
   )

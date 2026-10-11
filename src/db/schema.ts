@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie'
 import type { Analysis, Color, Game, GameResult, Site, Speed } from '../import/types'
 import type { RepMove, Repertoire } from '../repertoire/types'
+import type { ReviewLogEntry, TrainingCard } from '../training/types'
 
 /** One configured account per site. */
 export interface Account {
@@ -50,6 +51,8 @@ export class ChessDb extends Dexie {
   repMoves!: Table<RepMove, string>
   explorerCache!: Table<CacheEntry, string>
   evalCache!: Table<CacheEntry, string>
+  cards!: Table<TrainingCard, string>
+  reviewLogs!: Table<ReviewLogEntry, string>
   accounts!: Table<Account, Site>
   games!: Table<Game, string>
   analyses!: Table<Analysis, string>
@@ -70,6 +73,10 @@ export class ChessDb extends Dexie {
       repMoves: 'id, repertoireId, [repertoireId+fromEpd]',
       explorerCache: 'key',
       evalCache: 'key',
+    })
+    this.version(3).stores({
+      cards: 'id, repertoireId',
+      reviewLogs: 'id, cardId, reviewedAt',
     })
   }
 }

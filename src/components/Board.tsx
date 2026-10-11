@@ -43,29 +43,37 @@ export function Board({ fen, orientation = 'white', lastMove, arrows, onMove }: 
     return () => api.current?.destroy()
   }, [])
 
+  // Applies the props to chessground. Kept in a ref so a move can re-sync the board:
+  // chessground plays a move locally, but the page decides the position (a wrong
+  // answer in training must snap back).
+  const sync = useRef(() => {})
   useEffect(() => {
-    const legal = playable ? legalDests(fen) : undefined
-    api.current?.set({
-      fen,
-      orientation,
-      viewOnly: !playable,
-      turnColor: legal?.turn,
-      lastMove: lastMove ? [lastMove.slice(0, 2) as Key, lastMove.slice(2, 4) as Key] : undefined,
-      movable: {
-        free: false,
-        color: legal?.turn,
-        dests: legal?.dests as Map<Key, Key[]> | undefined,
-        showDests: true,
-        events: {
-          after: (orig, dest) => {
-            // Auto-queen: underpromotions don't matter in an opening repertoire.
-            const isPawn = api.current?.state.pieces.get(dest)?.role === 'pawn'
-            const promo = isPawn && (dest[1] === '8' || dest[1] === '1') ? 'q' : ''
-            onMoveRef.current?.(`${orig}${dest}${promo}`)
+    sync.current = () => {
+      const legal = playable ? legalDests(fen) : undefined
+      api.current?.set({
+        fen,
+        orientation,
+        viewOnly: !playable,
+        turnColor: legal?.turn,
+        lastMove: lastMove ? [lastMove.slice(0, 2) as Key, lastMove.slice(2, 4) as Key] : undefined,
+        movable: {
+          free: false,
+          color: legal?.turn,
+          dests: legal?.dests as Map<Key, Key[]> | undefined,
+          showDests: true,
+          events: {
+            after: (orig, dest) => {
+              // Auto-queen: underpromotions don't matter in an opening repertoire.
+              const isPawn = api.current?.state.pieces.get(dest)?.role === 'pawn'
+              const promo = isPawn && (dest[1] === '8' || dest[1] === '1') ? 'q' : ''
+              onMoveRef.current?.(`${orig}${dest}${promo}`)
+              setTimeout(() => sync.current(), 0)
+            },
           },
         },
-      },
-    })
+      })
+    }
+    sync.current()
   }, [fen, orientation, lastMove, playable])
 
   const arrowKey = arrows?.join(',') ?? ''
