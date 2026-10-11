@@ -4,7 +4,7 @@ L'app è un sito statico: Cloudflare Pages la ricostruisce da GitHub a ogni push
 
 ## Una volta sola (circa 5 minuti)
 1. Crea un account gratuito su https://dash.cloudflare.com/sign-up.
-2. Nel pannello: **Workers & Pages → Create → Pages → Connect to Git**.
+2. Nel pannello: **Compute → Workers & Pages → Create** e collega GitHub (va bene sia un Worker sia un progetto Pages).
 3. Autorizza GitHub e scegli il repository **APruner-23/chess_app**.
 4. Impostazioni di build:
    - **Framework preset**: None
@@ -16,8 +16,9 @@ L'app è un sito statico: Cloudflare Pages la ricostruisce da GitHub a ogni push
 Da quel momento ogni push su `main` aggiorna il sito da solo.
 
 ## Cosa fa il repository per Cloudflare
+- `wrangler.jsonc`: per i Worker (la modalità che Cloudflare propone di default), il comando di deploy `npx wrangler deploy` pubblica `dist/` e rimanda ogni indirizzo sconosciuto (es. `/partite`, `/oauth`) a `index.html`, così funzionano i link diretti e il ritorno da Lichess.
 - `public/_headers`: gli header COOP/COEP (isolamento tra origini), uguali a quelli dello sviluppo.
-- `public/_redirects`: ogni indirizzo dell'app (es. `/partite`, `/oauth`) torna a `index.html`, così funzionano i link diretti e il ritorno da Lichess.
+- Non usare un file `_redirects` con `/* /index.html 200`: i Worker lo rifiutano come ciclo infinito (errore 100324).
 
 ## Prima prova dal vivo
 1. **Partite → Importa partite**: prima vera chiamata a Chess.com e Lichess.
