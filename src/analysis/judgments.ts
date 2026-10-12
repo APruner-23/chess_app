@@ -51,6 +51,11 @@ function cpAdvice(prev: Eval, next: Eval, color: Color): Judgment | undefined {
  * `judged(ply)` restricts the plies that may be judged: Lichess only judges plies
  * for which its server computed a better variation.
  */
+/** The judgment of a single move, given the evals before and after it. */
+export function judgeMove(prev: Eval, next: Eval, color: Color): Judgment | undefined {
+  return mateAdvice(prev, next, color) ?? cpAdvice(prev, next, color)
+}
+
 export function judgeMoves(
   evals: readonly Eval[],
   judged: (ply: number) => boolean = () => true,

@@ -4,7 +4,7 @@ import { parseFen } from 'chessops/fen'
 import { endPhase, phaseOf } from '../../src/chess/phase'
 import { pvMoves } from '../../src/chess/pv'
 import { replaySan, replaySanFrom } from '../../src/chess/position'
-import { moveQualities } from '../../src/analysis/quality'
+import { classifyMove, moveQualities } from '../../src/analysis/quality'
 import type { Advice } from '../../src/analysis/judgments'
 
 describe('formatTimeControl', () => {
@@ -68,5 +68,16 @@ describe('moveQualities', () => {
       [2, 'excellent'],
       [3, 'good'],
     ])
+  })
+})
+
+describe('classifyMove', () => {
+  it('labels a single move from the evals around it', () => {
+    expect(classifyMove({ cp: 30 }, { cp: 30 }, 'white', true)).toBe('best')
+    expect(classifyMove({ cp: 30 }, { cp: 20 }, 'white', false)).toBe('excellent')
+    expect(classifyMove({ cp: 30 }, { cp: -20 }, 'white', false)).toBe('good')
+    expect(classifyMove({ cp: 30 }, { cp: 400 }, 'black', false)).toBe('blunder')
+    // A blunder stays a blunder even if it was the engine's (shallow) first choice.
+    expect(classifyMove({ cp: 0 }, { mate: 2 }, 'black', true)).toBe('blunder')
   })
 })

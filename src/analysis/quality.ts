@@ -1,5 +1,5 @@
-import type { Eval } from '../import/types'
-import type { Advice } from './judgments'
+import type { Color, Eval } from '../import/types'
+import { judgeMove, type Advice, type Judgment } from './judgments'
 import { INITIAL_EVAL, winPercent } from './winPercent'
 
 /** Positive labels, like Chess.com's: the bad ones are the Lichess judgments. */
@@ -25,12 +25,26 @@ export function moveQualities(
     if (ply < bookPlies) return void out.set(ply, 'book')
     if (isBest(ply)) return void out.set(ply, 'best')
     const prev = ply === 0 ? INITIAL_EVAL : evals[ply - 1]!
-    const sign = ply % 2 === 0 ? 1 : -1
-    const drop = sign * (winPercent(prev) - winPercent(next))
-    if (drop < EXCELLENT_DROP) out.set(ply, 'excellent')
-    else if (drop < GOOD_DROP) out.set(ply, 'good')
+    const q = dropQuality(prev, next, ply % 2 === 0 ? 'white' : 'black')
+    if (q) out.set(ply, q)
   })
   return out
+}
+
+function dropQuality(prev: Eval, next: Eval, color: Color): Quality | undefined {
+  const sign = color === 'white' ? 1 : -1
+  const drop = sign * (winPercent(prev) - winPercent(next))
+  return drop < EXCELLENT_DROP ? 'excellent' : drop < GOOD_DROP ? 'good' : undefined
+}
+
+/** Label of one move outside the stored analysis (e.g. a variation tried on the board). */
+export function classifyMove(
+  prev: Eval,
+  next: Eval,
+  color: Color,
+  isBest: boolean,
+): Quality | Judgment | undefined {
+  return judgeMove(prev, next, color) ?? (isBest ? 'best' : dropQuality(prev, next, color))
 }
 
 export const QUALITY_LABELS: Record<Quality, string> = {

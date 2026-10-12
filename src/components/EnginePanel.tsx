@@ -49,7 +49,8 @@ export function EnginePanel({
   onPlay,
 }: {
   fen: string
-  onBest?: (uci?: string, ev?: Eval) => void
+  /** Best move and eval of `fen` so far, reported as the search deepens. */
+  onBest?: (uci?: string, ev?: Eval, depth?: number, fen?: string) => void
   /** Click on a move of a line: plays the line up to that move. */
   onPlay?: (sans: string[]) => void
 }) {
@@ -81,8 +82,9 @@ export function EnginePanel({
   const lines = result.fen === fen ? result.lines : []
   const best = lines[0]?.pv[0]
   const bestEval = lines[0]?.eval
+  const depth = lines[0]?.depth
   const evalKey = bestEval ? formatEval(bestEval) : ''
-  useEffect(() => onBest?.(best, bestEval), [best, evalKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => onBest?.(best, bestEval, depth, fen), [best, evalKey, depth]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <section className="rounded-lg bg-stone-950/40 p-2 text-sm">

@@ -16,7 +16,13 @@ import {
   BOARD_COLUMN,
 } from '../components/format'
 import { JUDGMENT_LABELS, JUDGMENT_SYMBOLS, summarize } from '../analysis/summary'
-import { QUALITY_LABELS, QUALITY_SYMBOLS, moveQualities, type Quality } from '../analysis/quality'
+import {
+  QUALITY_LABELS,
+  QUALITY_SYMBOLS,
+  classifyMove,
+  moveQualities,
+  type Quality,
+} from '../analysis/quality'
 import type { Judgment } from '../analysis/judgments'
 import { INITIAL_EVAL } from '../analysis/winPercent'
 import { figurine } from '../chess/figurine'
@@ -35,10 +41,10 @@ const JUDGMENT_TEXT: Record<Judgment, string> = {
 }
 
 const QUALITY_TEXT: Record<Quality, string> = {
-  book: 'text-amber-300',
-  best: 'text-emerald-400',
-  excellent: 'text-green-300',
-  good: 'text-stone-300',
+  book: 'text-stone-400',
+  best: 'text-sky-400',
+  excellent: 'text-emerald-400',
+  good: 'text-green-300',
 }
 
 const BOOK_SVG =
@@ -66,12 +72,51 @@ function glyphFor(
 
 const GLYPH_COLORS: Record<Quality | Judgment, string> = {
   book: '#a16207',
-  best: '#059669',
-  excellent: '#16a34a',
-  good: '#57534e',
+  best: '#2563eb',
+  excellent: '#059669',
+  good: '#16a34a',
   inaccuracy: '#ca8a04',
   mistake: '#ea580c',
   blunder: '#dc2626',
+}
+
+interface EngineInfo {
+  best?: string
+  eval: Eval
+  depth: number
+}
+
+/** Depth the live engine must reach before a variation move gets a label. */
+const LABEL_DEPTH = 12
+
+/**
+ * Label of the last move of a variation, from the live engine's evals before and after
+ * it; `gameStart` is the stored analysis of the position the variation left the game from.
+ */
+function variationGlyph(
+  v: { fens: string[]; ucis: string[] },
+  sans: string[],
+  seen: Record<string, EngineInfo>,
+  gameStart: { eval?: Eval; best?: string },
+): Glyph | undefined {
+  const n = sans.length
+  const before = seen[v.fens[n - 1]!]
+  const after = seen[v.fens[n]!]
+  const prev =
+    before && before.depth >= LABEL_DEPTH ? before.eval : n === 1 ? gameStart.eval : undefined
+  if (!prev || !after || after.depth < LABEL_DEPTH) return undefined
+  const best = before?.best ?? (n === 1 ? gameStart.best : undefined)
+  const isBest = best !== undefined && sanOf(v.fens[n - 1]!, best) === sans[n - 1]
+  const color = v.fens[n - 1]!.split(' ')[1] === 'w' ? 'white' : 'black'
+  const label = classifyMove(prev, after.eval, color, isBest)
+  if (!label) return undefined
+  const judged = label === 'inaccuracy' || label === 'mistake' || label === 'blunder'
+  return glyphFor(
+    sans[n - 1]!,
+    v.ucis[n - 1]!,
+    judged ? undefined : label,
+    judged ? label : undefined,
+  )
 }
 
 /** SAN of a UCI move in a position, or undefined if it isn't legal there. */
@@ -119,8 +164,13 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
   const [ply, setPly] = useState(last)
   /** Moves tried from the current game position (empty = following the game). */
   const [variation, setVariation] = useState<string[]>([])
-  const [engine, setEngine] = useState<{ best?: string; eval?: Eval }>({})
-  const onBest = useCallback((best?: string, ev?: Eval) => setEngine({ best, eval: ev }), [])
+  /** Live engine results by FEN, so moves tried in a variation can be labeled. */
+  const [seen, setSeen] = useState<Record<string, EngineInfo>>({})
+  const onBest = useCallback(
+    (best?: string, ev?: Eval, depth = 0, at?: string) =>
+      at && ev && setSeen((s) => ({ ...s, [at]: { best, eval: ev, depth } })),
+    [],
+  )
 
   const go = useCallback(
     (p: number) => {
@@ -134,6 +184,7 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
     [variation, replay, ply],
   )
   const fen = varReplay ? varReplay.fens[varReplay.fens.length - 1]! : replay.fens[ply]!
+  const engine: Partial<EngineInfo> = seen[fen] ?? {}
 
   /** Plays SAN moves from the position on screen: back on the game if they match it. */
   const playSans = useCallback(
@@ -224,14 +275,19 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
                 }
                 arrows={engine.best ? [engine.best] : undefined}
                 glyph={
-                  !variation.length && ply > 0
-                    ? glyphFor(
-                        game.moves[ply - 1]!,
-                        replay.ucis[ply - 1]!,
-                        qualities?.get(ply - 1),
-                        summary?.advices.get(ply - 1)?.judgment,
-                      )
-                    : undefined
+                  varReplay
+                    ? variationGlyph(varReplay, variation, seen, {
+                        eval: ply === 0 ? INITIAL_EVAL : evals?.[ply - 1],
+                        best: analysis?.plies[ply]?.best,
+                      })
+                    : ply > 0
+                      ? glyphFor(
+                          game.moves[ply - 1]!,
+                          replay.ucis[ply - 1]!,
+                          qualities?.get(ply - 1),
+                          summary?.advices.get(ply - 1)?.judgment,
+                        )
+                      : undefined
                 }
                 onMove={onMove}
               />
@@ -424,7 +480,7 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
                             : undefined
                       }
                       className={`rounded px-2 py-1 text-left ${ply === p + 1 && !variation.length ? 'bg-emerald-800' : 'hover:bg-stone-800'} ${
-                        game.openingPly !== undefined && p < game.openingPly ? 'text-amber-300' : ''
+                        game.openingPly !== undefined && p < game.openingPly ? 'text-stone-400' : ''
                       }`}
                     >
                       {figurine(game.moves[p]!)}

@@ -31,9 +31,9 @@ interface EvalGraphProps {
 const JUDGMENT_FILL = { inaccuracy: '#eab308', mistake: '#f97316', blunder: '#ef4444' }
 // Book moves get no dot: the opening would be a row of dots.
 const QUALITY_FILL: Partial<Record<Quality, string>> = {
-  best: '#10b981',
-  excellent: '#86efac',
-  good: '#a8a29e',
+  best: '#3b82f6',
+  excellent: '#10b981',
+  good: '#86efac',
 }
 
 function moveLabel(ply: number, moves: string[]): string {
