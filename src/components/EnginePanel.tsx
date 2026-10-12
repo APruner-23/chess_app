@@ -4,6 +4,7 @@ import type { PvLine } from '../engine/uci'
 import type { Eval } from '../import/types'
 import { figurine } from '../chess/figurine'
 import { pvMoves } from '../chess/pv'
+import { outcomeOf, type Outcome } from '../chess/position'
 import { formatEval } from './evalFormat'
 
 const LIVE_DEPTH = 22
@@ -42,6 +43,12 @@ export function PvLineView({
   )
 }
 
+function outcomeText(o: Outcome): string {
+  if (o.reason === 'checkmate')
+    return `${o.winner === 'white' ? 'Il Bianco' : 'Il Nero'} vince per scacco matto`
+  return o.reason === 'stalemate' ? 'Patta per stallo' : 'Patta: materiale insufficiente'
+}
+
 /** Live MultiPV analysis of the position on screen; reports the best move and its eval. */
 export function EnginePanel({
   fen,
@@ -55,10 +62,12 @@ export function EnginePanel({
   onPlay?: (sans: string[]) => void
 }) {
   const [result, setResult] = useState<{ fen: string; lines: PvLine[] }>({ fen, lines: [] })
+  const over = outcomeOf(fen)
 
   useEffect(() => {
+    if (outcomeOf(fen)) return // nothing to search in a finished position
     let last = 0
-    const handle = engineQueue().submit(
+    const handle = engineQueue('live').submit(
       {
         fen,
         multiPv: MULTI_PV,
@@ -91,7 +100,9 @@ export function EnginePanel({
       <div className="mb-1 text-stone-400">
         Stockfish 19 lite{lines[0] ? ` · profondità ${lines[0].depth}` : ''}
       </div>
-      {lines.length === 0 ? (
+      {over ? (
+        <p className="font-semibold">{outcomeText(over)}</p>
+      ) : lines.length === 0 ? (
         <p className="text-stone-500">Calcolo…</p>
       ) : (
         <ul className="space-y-1">

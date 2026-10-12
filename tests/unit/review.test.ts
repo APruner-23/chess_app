@@ -3,7 +3,7 @@ import { formatTimeControl } from '../../src/components/format'
 import { parseFen } from 'chessops/fen'
 import { endPhase, phaseOf } from '../../src/chess/phase'
 import { pvMoves } from '../../src/chess/pv'
-import { replaySan, replaySanFrom } from '../../src/chess/position'
+import { outcomeOf, replaySan, replaySanFrom } from '../../src/chess/position'
 import { classifyMove, moveQualities } from '../../src/analysis/quality'
 import type { Advice } from '../../src/analysis/judgments'
 
@@ -79,5 +79,14 @@ describe('classifyMove', () => {
     expect(classifyMove({ cp: 30 }, { cp: 400 }, 'black', false)).toBe('blunder')
     // A blunder stays a blunder even if it was the engine's (shallow) first choice.
     expect(classifyMove({ cp: 0 }, { mate: 2 }, 'black', true)).toBe('blunder')
+  })
+})
+
+describe('outcomeOf', () => {
+  it('recognizes checkmate and stalemate', () => {
+    const mate = replaySan(['f3', 'e5', 'g4', 'Qh4#'])
+    expect(outcomeOf(mate.fens[4]!)).toEqual({ winner: 'black', reason: 'checkmate' })
+    expect(outcomeOf(mate.fens[3]!)).toBeUndefined()
+    expect(outcomeOf('7k/5Q2/6K1/8/8/8/8/8 b - - 0 1')).toEqual({ reason: 'stalemate' })
   })
 })

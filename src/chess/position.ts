@@ -53,3 +53,23 @@ export function canonicalSan(pos: Position, san: string): string | undefined {
   const move = parseSan(pos, san) as NormalMove | undefined
   return move ? makeSan(pos, move) : undefined
 }
+
+export interface Outcome {
+  /** Undefined for a draw. */
+  winner?: 'white' | 'black'
+  reason: 'checkmate' | 'stalemate' | 'insufficient'
+}
+
+/** How the game stands if the position is over (no engine needed), else undefined. */
+export function outcomeOf(fen: string): Outcome | undefined {
+  const setup = parseFen(fen)
+  if (setup.isErr) return undefined
+  const pos = Chess.fromSetup(setup.value)
+  if (pos.isErr) return undefined
+  const p = pos.value
+  if (p.isCheckmate())
+    return { winner: p.turn === 'white' ? 'black' : 'white', reason: 'checkmate' }
+  if (p.isStalemate()) return { reason: 'stalemate' }
+  if (p.isInsufficientMaterial()) return { reason: 'insufficient' }
+  return undefined
+}

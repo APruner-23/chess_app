@@ -11,7 +11,7 @@ import { CoveragePanel } from '../components/CoveragePanel'
 import { ConfirmDialog, type ConfirmRequest } from '../components/ConfirmDialog'
 import { BOARD_COLUMN } from '../components/format'
 import { figurine } from '../chess/figurine'
-import { replaySan } from '../chess/position'
+import { outcomeOf, replaySan } from '../chess/position'
 import { db } from '../db/schema'
 import { RepGraph, positionFromEpd } from '../repertoire/graph'
 import { exportPgn, importPgn, studyPgnUrl } from '../repertoire/pgnIO'
@@ -161,7 +161,11 @@ function RepertoireEditor({ rep }: { rep: Repertoire }) {
       <div className="flex flex-col gap-4 lg:flex-row">
         <div className={`${BOARD_COLUMN} space-y-3`}>
           <div className="flex gap-2">
-            <EvalBar value={engine?.ev} orientation={rep.color} />
+            <EvalBar
+              value={engine?.ev}
+              orientation={rep.color}
+              outcome={outcomeOf(replay.fens[path.length]!)}
+            />
             <div className="min-w-0 flex-1">
               <Board
                 fen={replay.fens[path.length]!}

@@ -23,7 +23,7 @@ async function analyzeAndSave(
   onProgress: (d: number, t: number) => void,
 ) {
   const preset = await getSetting<Preset>(db, PRESET_KEY, defaultPreset())
-  const queue = engineQueue()
+  const queue = engineQueue('analysis')
   const analysis = await analyzeGame(
     game,
     async (fen, sig) => {

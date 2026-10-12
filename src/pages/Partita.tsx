@@ -26,7 +26,7 @@ import {
 import type { Judgment } from '../analysis/judgments'
 import { INITIAL_EVAL } from '../analysis/winPercent'
 import { figurine } from '../chess/figurine'
-import { replaySan, replaySanFrom } from '../chess/position'
+import { outcomeOf, replaySan, replaySanFrom } from '../chess/position'
 import { parseFen } from 'chessops/fen'
 import { Chess } from 'chessops/chess'
 import { parseUci } from 'chessops'
@@ -261,7 +261,7 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
       <div className="flex flex-col gap-4 lg:flex-row">
         <div className={BOARD_COLUMN}>
           <div className="flex gap-2">
-            <EvalBar value={currentEval} orientation={game.userColor} />
+            <EvalBar value={currentEval} orientation={game.userColor} outcome={outcomeOf(fen)} />
             <div className="min-w-0 flex-1">
               <Board
                 fen={fen}

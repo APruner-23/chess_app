@@ -34,7 +34,8 @@ Personal, local-first chess PWA for one user (the owner). It does two things:
   - `scripts/copy-engine.mjs` copies it from node_modules into `public/engine/` before dev and build.
   - Never commit the ~94 MB full engines. The npm package itself is over 150 MB.
   - Load with a plain `new Worker('/engine/<file>.js')`; it finds its `.wasm` by name. Verified in headless Chromium: ~245k nps, and it works offline from the PWA cache.
-  - `src/engine/queue.ts` priorities: `live` (position on screen) > `game` (analysis the user asked for) > `background`; a more urgent job stops the running one, which is re-queued.
+  - Two engine instances (`engineQueue('live' | 'analysis')` in `src/engine/instance.ts`): the position on screen never pauses game analyses. Inside a queue, `src/engine/queue.ts` priorities: `live` > `game` (analysis the user asked for) > `background`; a more urgent job stops the running one, which is re-queued.
+  - Finished positions (`outcomeOf`) are never searched: the engine panel says who won, the eval bar shows 1-0 / 0-1 / ½-½.
 - Storage: Dexie 4 + `dexie-react-hooks`.
 - Spaced repetition: `ts-fsrs` 5 (FSRS-6, `request_retention` 0.9).
 - Training (`src/training`): a card is `<repertoireId>|<epd>` for a user-to-move position with its main move; `syncAllCards` re-derives cards from the repertoire (changed main move → reset). FSRS state is stored as plain numbers (`StoredFsrs`). Due cards are grouped into lines from the start (`buildLines`): the app auto-plays the rest. "Difficili" is practice only (no scheduling, no log). "Impara" shows each line with arrows (nothing recorded), then replays it from memory without hints (`recall` lines): that attempt is the first answer. Training never shows the engine.
