@@ -4,6 +4,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { parseUci } from 'chessops'
 import { makeSan } from 'chessops/san'
 import { Board } from '../components/Board'
+import { EvalBar } from '../components/EvalBar'
+import type { Eval } from '../import/types'
 import { ExplorerPanel } from '../components/ExplorerPanel'
 import { CoveragePanel } from '../components/CoveragePanel'
 import { ConfirmDialog, type ConfirmRequest } from '../components/ConfirmDialog'
@@ -50,12 +52,13 @@ function RepertoireEditor({ rep }: { rep: Repertoire }) {
       return []
     }
   })
-  const [best, setBest] = useState<string>()
+  const [best, setBest] = useState<{ uci?: string; ev?: Eval; fen?: string }>()
   const [showImport, setShowImport] = useState(false)
   const [confirming, setConfirming] = useState<ConfirmRequest>()
   const replay = useMemo(() => replaySan(path), [path])
   const epd = replay.epds[path.length]!
   const children = graph.children(epd)
+  const engine = best?.fen === replay.fens[path.length] ? best : undefined
 
   // Which plies of the current line are already in the repertoire.
   const inRep = path.map((san, i) => graph.children(replay.epds[i]!).some((m) => m.san === san))
@@ -73,7 +76,10 @@ function RepertoireEditor({ rep }: { rep: Repertoire }) {
     },
     [epd, play],
   )
-  const onBest = useCallback((uci?: string) => setBest(uci), [])
+  const onBest = useCallback(
+    (uci?: string, ev?: Eval, _depth?: number, at?: string) => setBest({ uci, ev, fen: at }),
+    [],
+  )
   const addFromHere = (sans: string[]) =>
     // Adds the line up to here first, then each new move as a branch of the current position.
     addLine(db, rep.id, replay.epds[0]!, path).then(() =>
@@ -154,15 +160,22 @@ function RepertoireEditor({ rep }: { rep: Repertoire }) {
 
       <div className="flex flex-col gap-4 lg:flex-row">
         <div className={`${BOARD_COLUMN} space-y-3`}>
-          <Board
-            fen={replay.fens[path.length]!}
-            orientation={rep.color}
-            lastMove={path.length ? replay.ucis[path.length - 1] : undefined}
-            arrows={[
-              ...new Set([children[0]?.uci, best].filter((u): u is string => u !== undefined)),
-            ]}
-            onMove={onMove}
-          />
+          <div className="flex gap-2">
+            <EvalBar value={engine?.ev} orientation={rep.color} />
+            <div className="min-w-0 flex-1">
+              <Board
+                fen={replay.fens[path.length]!}
+                orientation={rep.color}
+                lastMove={path.length ? replay.ucis[path.length - 1] : undefined}
+                arrows={[
+                  ...new Set(
+                    [children[0]?.uci, engine?.uci].filter((u): u is string => u !== undefined),
+                  ),
+                ]}
+                onMove={onMove}
+              />
+            </div>
+          </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"

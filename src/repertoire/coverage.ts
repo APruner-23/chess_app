@@ -32,6 +32,14 @@ export interface Coverage {
   missing: string[]
 }
 
+/**
+ * Whether only the prepared opponent moves count at this position: White's first move
+ * in a Black repertoire, as long as the repertoire answers at least one.
+ */
+export function isScoped(graph: RepGraph, color: Color, epd: string): boolean {
+  return color === 'black' && epd === INITIAL_EPD && graph.children(epd).length > 0
+}
+
 /** Ignore opponent moves played in under 1% of games. */
 const MIN_SHARE = 0.01
 
@@ -68,8 +76,16 @@ export function coverage(
       for (const c of children) next(c, p / children.length)
       return
     }
-    const total = known.reduce((a, f) => a + f.games, 0)
-    for (const f of known) {
+    // A Black repertoire answers only the first moves it contains (a Caro-Kann
+    // repertoire is about 1.e4): other first moves belong to other repertoires.
+    const scoped = ply === 0 && isScoped(graph, color, epd)
+    const counted = scoped ? known.filter((f) => children.some((c) => c.san === f.san)) : known
+    const total = counted.reduce((a, f) => a + f.games, 0)
+    if (scoped && total === 0) {
+      for (const c of children) next(c, p / children.length)
+      return
+    }
+    for (const f of counted) {
       const share = total ? f.games / total : 0
       const child = children.find((c) => c.san === f.san)
       if (child) next(child, p * share)
@@ -122,7 +138,8 @@ export function reachProbabilities(
       walk(children[0]!.toEpd, p, ply + 1, nextSeen)
       return
     }
-    const known = freqs(epd)
+    const scoped = ply === 0 && isScoped(graph, color, epd)
+    const known = freqs(epd)?.filter((f) => !scoped || children.some((c) => c.san === f.san))
     const total = known?.reduce((a, f) => a + f.games, 0) ?? 0
     for (const c of children) {
       const games = known?.find((f) => f.san === c.san)?.games

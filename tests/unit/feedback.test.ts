@@ -35,6 +35,15 @@ const userPly = color === 'white' ? 0 : 1 // first ply where the user moves
 const kinds = (items: { kind: string }[]) => items.map((i) => i.kind).sort()
 
 describe('compareGame', () => {
+  it('ignores games outside the first moves of a Black repertoire', () => {
+    const black = { ...rep, color: 'black' as const }
+    const g = { ...game, userColor: 'black' as const }
+    const other = g.moves[0] === 'd4' ? 'e4' : 'd4'
+    expect(compareGame(g, [{ repertoire: black, graph: repOf([other, 'd5']) }])).toEqual([])
+    const hole = compareGame(g, [{ repertoire: black, graph: repOf([g.moves[0]!, g.moves[1]!]) }])
+    expect(kinds(hole)).not.toEqual([])
+  })
+
   it('flags a deviation when the user leaves the repertoire', () => {
     const at = userPly + 2
     const other =

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/schema'
-import type { Color } from '../import/types'
+import type { Color, Eval } from '../import/types'
 import { getCloudEval, type CloudEval } from '../lichess/cloudEval'
 import { totalGames, type ExplorerDb, type ExplorerResult } from '../lichess/explorer'
 import { NeedsTokenError } from '../lichess/cache'
@@ -37,7 +37,8 @@ interface ExplorerPanelProps {
   prepared: Set<string>
   onPlay: (san: string) => void
   onAdd: (sans: string[]) => void
-  onBest?: (uci?: string) => void
+  /** Best move and eval of `fen` (cloud eval or local engine). */
+  onBest?: (uci?: string, ev?: Eval, depth?: number, fen?: string) => void
 }
 
 function useExplorer(dbName: ExplorerDb, epd: string, enabled: boolean) {
@@ -204,10 +205,10 @@ export function ExplorerPanel({
     [epd],
   )
   // The cloud eval's best move gets the arrow; without it, the local engine reports its own.
-  const cloudBest = cloud?.epd === epd ? (cloud.value?.pvs[0]?.moves[0] ?? null) : undefined
+  const cloudPv = cloud?.epd === epd ? (cloud.value?.pvs[0] ?? null) : undefined
   useEffect(() => {
-    if (cloudBest !== null) onBest?.(cloudBest)
-  }, [cloudBest, onBest])
+    if (cloudPv !== null) onBest?.(cloudPv?.moves[0], cloudPv?.eval, undefined, fen)
+  }, [cloudPv, onBest, fen])
   const opponentTurn = (epd.split(' ')[1] === 'w' ? 'white' : 'black') !== color
 
   const rows: MoveRow[] | undefined =

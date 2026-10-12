@@ -91,6 +91,37 @@ describe('coverage', () => {
   })
 })
 
+describe('coverage of a Black repertoire', () => {
+  // Caro-Kann: only about 1.e4; 1.d4 belongs to another repertoire.
+  const g = new RepGraph(line([], ['e4', 'c6', 'd4', 'd5']))
+  const afterC6 = replaySan(['e4', 'c6']).epds[2]!
+  const freqs = (epd: string): MoveFreq[] | undefined =>
+    epd === INITIAL_EPD
+      ? [
+          { san: 'e4', games: 50 },
+          { san: 'd4', games: 30 },
+          { san: 'c4', games: 20 },
+        ]
+      : epd === afterC6
+        ? [
+            { san: 'd4', games: 80 },
+            { san: 'Nc3', games: 20 },
+          ]
+        : undefined
+
+  it('counts only the first moves it answers', () => {
+    const c = coverage(g, 'black', freqs, 2)
+    expect(c.byMove[0]).toBe(1)
+    expect(c.byMove[1]).toBeCloseTo(0.8)
+    expect(c.holes.map((h) => h.san)).toEqual(['Nc3'])
+  })
+
+  it('treats White repertoires as before', () => {
+    const white = new RepGraph(line([], ['e4']))
+    expect(coverage(white, 'white', freqs, 1).byMove[0]).toBe(0)
+  })
+})
+
 describe('PGN import/export', () => {
   const rep: Repertoire = {
     id: 'r',

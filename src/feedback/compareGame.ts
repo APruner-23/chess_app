@@ -4,6 +4,7 @@ import { replaySan } from '../chess/position'
 import type { Analysis, Game } from '../import/types'
 import { judgeMoves } from '../analysis/judgments'
 import { RepGraph, positionFromEpd, turnOf } from '../repertoire/graph'
+import { isScoped } from '../repertoire/coverage'
 import type { Repertoire } from '../repertoire/types'
 import type { FeedbackItem, FeedbackKind } from './types'
 
@@ -48,10 +49,20 @@ export function compareGame(
   const candidates = repertoires.filter((r) => r.repertoire.color === game.userColor)
   if (candidates.length === 0) return []
   const { epds } = replaySan(game.moves)
+  // A Black repertoire is only about the first moves it answers (1.d4 is not a hole
+  // in a Caro-Kann repertoire); a game outside every repertoire gives no feedback.
   const best = candidates
     .map((r) => walk(r, game, epds))
-    .sort((a, b) => b.bookPlies - a.bookPlies)[0]!
-  if (best.bookPlies === 0 && best.kind === 'end') return [] // empty repertoire
+    .filter(
+      (w) =>
+        !(
+          w.bookPlies === 0 &&
+          w.kind === 'hole' &&
+          isScoped(w.rep.graph, w.rep.repertoire.color, epds[0]!)
+        ),
+    )
+    .sort((a, b) => b.bookPlies - a.bookPlies)[0]
+  if (!best || (best.bookPlies === 0 && best.kind === 'end')) return [] // empty repertoire
   const rep = best.rep.repertoire
   const ply = best.bookPlies
   const evalAt = (p: number) => (p > 0 ? analysis?.plies[p - 1]?.eval : undefined)
