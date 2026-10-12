@@ -69,7 +69,16 @@ export function Board({ fen, orientation = 'white', lastMove, arrows, glyph, onM
   useEffect(() => {
     sync.current = () => {
       const legal = playable ? legalDests(fen) : undefined
-      api.current?.set({
+      const cg = api.current
+      if (cg && cg.state.orientation !== orientation) {
+        // A flip rebuilds the board element, and chessground binds its mouse/touch
+        // listeners only if it is not view-only at that moment: flipping a read-only
+        // board would leave it dead once it becomes playable. The listeners check
+        // viewOnly on every event, so binding them always is safe.
+        cg.state.viewOnly = false
+        cg.set({ orientation })
+      }
+      cg?.set({
         fen,
         orientation,
         viewOnly: !playable,
