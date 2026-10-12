@@ -100,7 +100,7 @@ export function Trainer({ lines, onAnswer, onExit }: TrainerProps) {
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row">
-      <div className="w-full max-w-[min(100%,560px)]">
+      <div className="w-full max-w-[min(100%,calc(100vh-12rem))]">
         <Board
           fen={fen}
           orientation={line.color}

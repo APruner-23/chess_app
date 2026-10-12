@@ -1,5 +1,5 @@
 import { Chess, type Position } from 'chessops/chess'
-import { makeFen } from 'chessops/fen'
+import { makeFen, parseFen } from 'chessops/fen'
 import { makeSan, parseSan } from 'chessops/san'
 import { makeUci, type NormalMove } from 'chessops'
 
@@ -25,7 +25,15 @@ export interface Replay {
 
 /** Replays SAN moves from the standard start. Throws on an illegal move. */
 export function replaySan(sans: readonly string[]): Replay {
-  const pos = Chess.default()
+  return replayFrom(Chess.default(), sans)
+}
+
+/** Like replaySan, from a given FEN (e.g. a variation tried during a game review). */
+export function replaySanFrom(fen: string, sans: readonly string[]): Replay {
+  return replayFrom(Chess.fromSetup(parseFen(fen).unwrap()).unwrap(), sans)
+}
+
+function replayFrom(pos: Chess, sans: readonly string[]): Replay {
   const epds = [epdOf(pos)]
   const fens = [makeFen(pos.toSetup())]
   const ucis: string[] = []

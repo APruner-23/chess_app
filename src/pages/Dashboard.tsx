@@ -109,9 +109,16 @@ export function Dashboard() {
       .filter((g) => accuracy.has(g.id))
       .sort((a, b) => b.playedAt - a.playedAt)
       .slice(0, 30)
-    const combos = new Map<string, number>()
-    for (const g of data.games)
-      combos.set(`${g.site}|${g.speed}`, (combos.get(`${g.site}|${g.speed}`) ?? 0) + 1)
+    // Per site and speed: game count (for sorting) and the user's latest rating.
+    const combos = new Map<string, { n: number; t: number; rating?: number }>()
+    for (const g of data.games) {
+      const key = `${g.site}|${g.speed}`
+      const c = combos.get(key) ?? { n: 0, t: -Infinity }
+      c.n++
+      const rating = g[g.userColor].rating
+      if (rating !== undefined && g.playedAt > c.t) Object.assign(c, { t: g.playedAt, rating })
+      combos.set(key, c)
+    }
     const openings = openingStats(data.games, 'family')
       .slice(0, 8)
       .map((s) => {
@@ -127,7 +134,7 @@ export function Dashboard() {
       avgAccuracy: recent.length
         ? recent.reduce((a, g) => a + accuracy.get(g.id)!, 0) / recent.length
         : undefined,
-      combos: [...combos.entries()].sort((a, b) => b[1] - a[1]),
+      combos: [...combos.entries()].sort((a, b) => b[1].n - a[1].n),
       openings,
       study: (() => {
         const map = new Map<string, typeof data.openItems>()
@@ -225,11 +232,12 @@ export function Dashboard() {
             onChange={(e) => setChosen(e.target.value)}
             className="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-sm"
           >
-            {derived.combos.map(([key, n]) => {
+            {derived.combos.map(([key, c]) => {
               const [s, sp] = key.split('|') as [Site, Speed]
               return (
                 <option key={key} value={key}>
-                  {SITE_LABELS[s]} · {SPEED_LABELS[sp]} ({n})
+                  {SITE_LABELS[s]} · {SPEED_LABELS[sp]}
+                  {c.rating !== undefined ? ` · ${c.rating}` : ''}
                 </option>
               )
             })}

@@ -6,6 +6,7 @@ import { makeSan } from 'chessops/san'
 import { Board } from '../components/Board'
 import { ExplorerPanel } from '../components/ExplorerPanel'
 import { CoveragePanel } from '../components/CoveragePanel'
+import { BOARD_COLUMN } from '../components/format'
 import { figurine } from '../chess/figurine'
 import { replaySan } from '../chess/position'
 import { db } from '../db/schema'
@@ -144,12 +145,14 @@ function RepertoireEditor({ rep }: { rep: Repertoire }) {
       {showImport && <ImportBox repertoireId={rep.id} onDone={() => setShowImport(false)} />}
 
       <div className="flex flex-col gap-4 lg:flex-row">
-        <div className="w-full max-w-[min(100%,520px)] space-y-3">
+        <div className={`${BOARD_COLUMN} space-y-3`}>
           <Board
             fen={replay.fens[path.length]!}
             orientation={rep.color}
             lastMove={path.length ? replay.ucis[path.length - 1] : undefined}
-            arrows={best ? [best] : children[0] ? [children[0].uci] : undefined}
+            arrows={[
+              ...new Set([children[0]?.uci, best].filter((u): u is string => u !== undefined)),
+            ]}
             onMove={onMove}
           />
           <div className="flex flex-wrap gap-2">
@@ -255,6 +258,7 @@ function RepertoireEditor({ rep }: { rep: Repertoire }) {
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <ExplorerPanel
             epd={epd}
+            fen={replay.fens[path.length]!}
             color={rep.color}
             prepared={new Set(children.map((m) => m.san))}
             onPlay={play}

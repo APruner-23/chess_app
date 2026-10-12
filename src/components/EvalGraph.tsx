@@ -11,6 +11,7 @@ import {
 import { winPercent } from '../analysis/winPercent'
 import type { Advice } from '../analysis/judgments'
 import { JUDGMENT_SYMBOLS } from '../analysis/summary'
+import { QUALITY_LABELS, type Quality } from '../analysis/quality'
 import { figurine } from '../chess/figurine'
 import type { Eval } from '../import/types'
 import { formatEval } from './evalFormat'
@@ -20,12 +21,20 @@ interface EvalGraphProps {
   evals: Eval[]
   moves: string[]
   advices: Map<number, Advice>
+  /** Positive labels (best, excellent, …) of the moves without a judgment. */
+  qualities: Map<number, Quality>
   /** Current position, in plies from the start. */
   ply: number
   onSelect: (ply: number) => void
 }
 
 const JUDGMENT_FILL = { inaccuracy: '#eab308', mistake: '#f97316', blunder: '#ef4444' }
+// Book moves get no dot: the opening would be a row of dots.
+const QUALITY_FILL: Partial<Record<Quality, string>> = {
+  best: '#10b981',
+  excellent: '#86efac',
+  good: '#a8a29e',
+}
 
 function moveLabel(ply: number, moves: string[]): string {
   if (ply === 0) return 'Inizio'
@@ -34,7 +43,7 @@ function moveLabel(ply: number, moves: string[]): string {
 }
 
 /** White's win% over the game; click a point to jump to that move. */
-export function EvalGraph({ evals, moves, advices, ply, onSelect }: EvalGraphProps) {
+export function EvalGraph({ evals, moves, advices, qualities, ply, onSelect }: EvalGraphProps) {
   const data = [{ ply: 0, win: 50, label: 'Inizio' }].concat(
     evals.map((e, i) => ({ ply: i + 1, win: winPercent(e), label: formatEval(e) })),
   )
@@ -61,10 +70,12 @@ export function EvalGraph({ evals, moves, advices, ply, onSelect }: EvalGraphPro
               const p = payload?.[0]?.payload as (typeof data)[number] | undefined
               if (!active || !p) return null
               const advice = p.ply > 0 ? advices.get(p.ply - 1) : undefined
+              const quality = p.ply > 0 ? qualities.get(p.ply - 1) : undefined
               return (
                 <div className="rounded border border-stone-700 bg-stone-900 px-2 py-1 text-xs text-stone-100">
                   {moveLabel(p.ply, moves)}
                   {advice && ` ${JUDGMENT_SYMBOLS[advice.judgment]}`} · {p.label}
+                  {quality && ` · ${QUALITY_LABELS[quality]}`}
                 </div>
               )
             }}
@@ -80,16 +91,20 @@ export function EvalGraph({ evals, moves, advices, ply, onSelect }: EvalGraphPro
             isAnimationActive={false}
             dot={(props) => {
               const advice = props.index > 0 ? advices.get(props.index - 1) : undefined
-              if (!advice) return <g key={props.index} />
+              const quality = props.index > 0 ? qualities.get(props.index - 1) : undefined
+              const fill = advice
+                ? JUDGMENT_FILL[advice.judgment]
+                : quality && QUALITY_FILL[quality]
+              if (!fill) return <g key={props.index} />
               return (
                 <Dot
                   key={props.index}
                   cx={props.cx}
                   cy={props.cy}
-                  r={4}
-                  fill={JUDGMENT_FILL[advice.judgment]}
+                  r={advice ? 4 : 2.5}
+                  fill={fill}
                   stroke="#1c1917"
-                  strokeWidth={2}
+                  strokeWidth={advice ? 2 : 1}
                 />
               )
             }}
