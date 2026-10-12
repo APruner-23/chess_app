@@ -6,6 +6,7 @@ import { makeSan } from 'chessops/san'
 import { Board } from '../components/Board'
 import { ExplorerPanel } from '../components/ExplorerPanel'
 import { CoveragePanel } from '../components/CoveragePanel'
+import { ConfirmDialog, type ConfirmRequest } from '../components/ConfirmDialog'
 import { BOARD_COLUMN } from '../components/format'
 import { figurine } from '../chess/figurine'
 import { replaySan } from '../chess/position'
@@ -51,6 +52,7 @@ function RepertoireEditor({ rep }: { rep: Repertoire }) {
   })
   const [best, setBest] = useState<string>()
   const [showImport, setShowImport] = useState(false)
+  const [confirming, setConfirming] = useState<ConfirmRequest>()
   const replay = useMemo(() => replaySan(path), [path])
   const epd = replay.epds[path.length]!
   const children = graph.children(epd)
@@ -131,17 +133,23 @@ function RepertoireEditor({ rep }: { rep: Repertoire }) {
         <button
           type="button"
           className={`${btn} text-red-300`}
-          onClick={async () => {
-            if (confirm(`Eliminare “${rep.name}” e tutte le sue mosse?`)) {
-              await deleteRepertoire(db, rep.id)
-              navigate('/repertori')
-            }
-          }}
+          onClick={() =>
+            setConfirming({
+              title: `Eliminare “${rep.name}”?`,
+              text: 'Spariscono tutte le sue mosse e i progressi del loro allenamento. Non si può annullare.',
+              confirm: 'Elimina repertorio',
+              onConfirm: async () => {
+                await deleteRepertoire(db, rep.id)
+                navigate('/repertori')
+              },
+            })
+          }
         >
           Elimina
         </button>
       </div>
 
+      <ConfirmDialog request={confirming} onClose={() => setConfirming(undefined)} />
       {showImport && <ImportBox repertoireId={rep.id} onDone={() => setShowImport(false)} />}
 
       <div className="flex flex-col gap-4 lg:flex-row">
@@ -230,7 +238,14 @@ function RepertoireEditor({ rep }: { rep: Repertoire }) {
                     <button
                       type="button"
                       className="ml-auto text-xs text-red-300 hover:underline"
-                      onClick={() => deleteMove(db, m)}
+                      onClick={() =>
+                        setConfirming({
+                          title: `Eliminare ${figurine(m.san)}?`,
+                          text: 'Vengono eliminate anche tutte le mosse che la seguono, con i progressi del loro allenamento.',
+                          confirm: 'Elimina mossa',
+                          onConfirm: () => deleteMove(db, m),
+                        })
+                      }
                     >
                       elimina
                     </button>

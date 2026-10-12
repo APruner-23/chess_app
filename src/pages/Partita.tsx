@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Board } from '../components/Board'
+import { Board, type Glyph } from '../components/Board'
 import { EvalBar } from '../components/EvalBar'
 import { EvalGraph } from '../components/EvalGraph'
 import { EnginePanel } from '../components/EnginePanel'
@@ -39,6 +39,39 @@ const QUALITY_TEXT: Record<Quality, string> = {
   best: 'text-emerald-400',
   excellent: 'text-green-300',
   good: 'text-stone-300',
+}
+
+const BOOK_SVG =
+  '<path d="M18 30 Q34 20 50 31 Q66 20 82 30 V74 Q66 64 50 75 Q34 64 18 74 Z" fill="none" stroke="#fff" stroke-width="8" stroke-linejoin="round"/><path d="M50 31 V75" stroke="#fff" stroke-width="7"/>'
+
+/** Board glyph for a judged or labeled move. */
+function glyphFor(
+  san: string,
+  uci: string,
+  quality?: Quality,
+  judgment?: Judgment,
+): Glyph | undefined {
+  // Castling is king-takes-rook in chessops' UCI: put the glyph where the king lands.
+  const rank = uci[1]!
+  const square = san.startsWith('O-O-O')
+    ? `c${rank}`
+    : san.startsWith('O-O')
+      ? `g${rank}`
+      : uci.slice(2, 4)
+  if (judgment) return { square, color: GLYPH_COLORS[judgment], text: JUDGMENT_SYMBOLS[judgment] }
+  if (quality === 'book') return { square, color: GLYPH_COLORS.book, svg: BOOK_SVG }
+  if (quality) return { square, color: GLYPH_COLORS[quality], text: QUALITY_SYMBOLS[quality] }
+  return undefined
+}
+
+const GLYPH_COLORS: Record<Quality | Judgment, string> = {
+  book: '#a16207',
+  best: '#059669',
+  excellent: '#16a34a',
+  good: '#57534e',
+  inaccuracy: '#ca8a04',
+  mistake: '#ea580c',
+  blunder: '#dc2626',
 }
 
 /** SAN of a UCI move in a position, or undefined if it isn't legal there. */
@@ -190,6 +223,16 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
                       : undefined
                 }
                 arrows={engine.best ? [engine.best] : undefined}
+                glyph={
+                  !variation.length && ply > 0
+                    ? glyphFor(
+                        game.moves[ply - 1]!,
+                        replay.ucis[ply - 1]!,
+                        qualities?.get(ply - 1),
+                        summary?.advices.get(ply - 1)?.judgment,
+                      )
+                    : undefined
+                }
                 onMove={onMove}
               />
             </div>

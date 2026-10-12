@@ -4,10 +4,27 @@ import { Chess } from 'chessops/chess'
 import { parseFen } from 'chessops/fen'
 import { chessgroundDests } from 'chessops/compat'
 import type { Api } from '@lichess-org/chessground/api'
+import type { DrawShape } from '@lichess-org/chessground/draw'
 import type { Key } from '@lichess-org/chessground/types'
 import '@lichess-org/chessground/assets/chessground.base.css'
 import '@lichess-org/chessground/assets/chessground.brown.css'
 import '@lichess-org/chessground/assets/chessground.cburnett.css'
+
+export interface Glyph {
+  square: string
+  color: string
+  /** Text such as "?!" or "★", or raw SVG content in a 100×100 box. */
+  text?: string
+  svg?: string
+}
+
+/** The glyph's SVG: a disc overhanging the top-right corner of the square. */
+function glyphHtml(g: Glyph): string {
+  const inner =
+    g.svg ??
+    `<text x="50" y="52" text-anchor="middle" dominant-baseline="central" font-size="${(g.text?.length ?? 1) > 1 ? 52 : 64}" font-weight="700" font-family="system-ui,sans-serif" fill="#fff">${g.text}</text>`
+  return `<g transform="translate(71 -12) scale(0.4)"><circle cx="50" cy="50" r="50" fill="${g.color}" stroke="#1c1917" stroke-width="5"/>${inner}</g>`
+}
 
 interface BoardProps {
   fen: string
@@ -16,6 +33,8 @@ interface BoardProps {
   lastMove?: string
   /** Arrows to draw, as UCI moves (e.g. the engine's best move). */
   arrows?: string[]
+  /** A move annotation drawn in the corner of a square, like Lichess' glyphs. */
+  glyph?: Glyph
   /** Makes the board playable for the side to move; receives the move in UCI. */
   onMove?: (uci: string) => void
 }
@@ -29,7 +48,7 @@ function legalDests(fen: string) {
 }
 
 /** Board built on Lichess' chessground: read-only, or playable when onMove is given. */
-export function Board({ fen, orientation = 'white', lastMove, arrows, onMove }: BoardProps) {
+export function Board({ fen, orientation = 'white', lastMove, arrows, glyph, onMove }: BoardProps) {
   const el = useRef<HTMLDivElement>(null)
   const api = useRef<Api | null>(null)
   const onMoveRef = useRef(onMove)
@@ -77,17 +96,21 @@ export function Board({ fen, orientation = 'white', lastMove, arrows, onMove }: 
   }, [fen, orientation, lastMove, playable])
 
   const arrowKey = arrows?.join(',') ?? ''
+  const glyphKey = glyph ? `${glyph.square}|${glyphHtml(glyph)}` : ''
   useEffect(() => {
-    api.current?.setAutoShapes(
-      arrowKey
-        ? arrowKey.split(',').map((uci, i) => ({
-            orig: uci.slice(0, 2) as Key,
-            dest: uci.slice(2, 4) as Key,
-            brush: i === 0 ? 'paleBlue' : 'paleGrey',
-          }))
-        : [],
-    )
-  }, [arrowKey, fen])
+    const shapes: DrawShape[] = arrowKey
+      ? arrowKey.split(',').map((uci, i) => ({
+          orig: uci.slice(0, 2) as Key,
+          dest: uci.slice(2, 4) as Key,
+          brush: i === 0 ? 'paleBlue' : 'paleGrey',
+        }))
+      : []
+    if (glyphKey) {
+      const [square, html] = glyphKey.split(/\|(.*)/s) as [string, string]
+      shapes.push({ orig: square as Key, customSvg: { html } })
+    }
+    api.current?.setAutoShapes(shapes)
+  }, [arrowKey, glyphKey, fen])
 
   return (
     <div className="aspect-square w-full">
