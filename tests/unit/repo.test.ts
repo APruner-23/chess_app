@@ -98,8 +98,10 @@ describe('feedback storage', () => {
       experimental: false,
     })
     await db.repertoires.update(rep.id, { createdAt: 0 })
-    // The repertoire expects a different first opponent move: a hole on ply 0.
-    await addLine(db, rep.id, INITIAL_EPD, [game.moves[0] === 'd4' ? 'e4' : 'd4'])
+    // MalVoluto has Black here. The repertoire expects a different second White move:
+    // a hole on ply 2 (a different first move would just be outside its scope).
+    const [m0, m1, m2] = game.moves as [string, string, string]
+    await addLine(db, rep.id, INITIAL_EPD, [m0, m1, m2 === 'd4' ? 'Nc3' : 'd4'])
     expect(await processFeedback(db)).toBe(1)
     const hole = (await db.feedback.where('status').equals('open').toArray())[0]!
     expect(hole.kind).toBe('hole')
@@ -107,7 +109,7 @@ describe('feedback storage', () => {
     expect(await processFeedback(db)).toBe(0)
     expect((await db.feedback.get(hole.id))!.status).toBe('ignored')
     // Once the move is prepared, the hole disappears.
-    await addLine(db, rep.id, INITIAL_EPD, [game.moves[0]!])
+    await addLine(db, rep.id, INITIAL_EPD, [m0, m1, m2])
     await processFeedback(db)
     expect(await db.feedback.get(hole.id)).toBeUndefined()
   })

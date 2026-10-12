@@ -50,7 +50,7 @@ describe('Lichess import', () => {
     await importLichess(account, { db, openings, fetch: lichessFetch(calls) })
     expect(new URL(calls[1]!).searchParams.get('since')).toBe(String(account.cursor))
     expect(await db.games.count()).toBe(30)
-  })
+  }, 30_000) // fake-indexeddb rewrites ~2,000 indexed positions slowly (~5 s)
 
   it('reports a missing user', async () => {
     const fetch404: typeof fetch = async () => new Response('', { status: 404 })
