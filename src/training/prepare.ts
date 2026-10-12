@@ -11,6 +11,8 @@ export interface TrainingLine {
   repertoireId: string
   color: Color
   steps: Step[]
+  /** Replay of the line just shown, to play from memory (no hints). */
+  recall?: boolean
 }
 
 export interface SessionInput {
@@ -46,7 +48,23 @@ export function prepareSession(mode: SessionMode, input: SessionInput): Training
     if (targets.size === 0) continue
     const graph = new RepGraph(input.movesByRep.get(rep.id) ?? [])
     for (const steps of buildLines(graph, targets, mode === 'learn' ? 'learn' : 'quiz')) {
-      lines.push({ repertoireId: rep.id, color: rep.color, steps })
+      if (mode !== 'learn') {
+        lines.push({ repertoireId: rep.id, color: rep.color, steps })
+        continue
+      }
+      // Learning: first the line with its moves shown (nothing recorded), then the same
+      // line from memory; that attempt is the card's first answer.
+      lines.push({
+        repertoireId: rep.id,
+        color: rep.color,
+        steps: steps.map((s) => ({ ...s, cardId: undefined })),
+      })
+      lines.push({
+        repertoireId: rep.id,
+        color: rep.color,
+        steps: steps.map((s) => (s.kind === 'learn' ? { ...s, kind: 'quiz' } : s)),
+        recall: true,
+      })
     }
   }
   return lines

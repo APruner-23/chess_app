@@ -194,5 +194,12 @@ describe('session preparation', () => {
     )
     expect(learned.sort()).toEqual(['Nf3', 'e4'])
     expect(lines.every((l) => l.color === 'white')).toBe(true)
+    // Each line is shown (no answers recorded), then replayed from memory without hints.
+    const shown = lines.filter((l) => !l.recall)
+    const recall = lines.filter((l) => l.recall)
+    expect(recall).toHaveLength(shown.length)
+    expect(shown.flatMap((l) => l.steps).every((s) => s.cardId === undefined)).toBe(true)
+    expect(recall.flatMap((l) => l.steps).some((s) => s.kind === 'learn')).toBe(false)
+    expect(recall.flatMap((l) => l.steps).filter((s) => s.cardId)).toHaveLength(2)
   })
 })

@@ -132,6 +132,8 @@ export function Trainer({ lines, onAnswer, onExit }: TrainerProps) {
               </span>
               . Giocala sulla scacchiera.
             </p>
+          ) : line.recall ? (
+            <p className="text-lg">Ora a memoria: qual è la tua mossa?</p>
           ) : (
             <p className="text-lg">Tocca a te: qual è la tua mossa?</p>
           )}
