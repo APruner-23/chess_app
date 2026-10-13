@@ -12,13 +12,23 @@ import { RepGraph, turnOf } from '../repertoire/graph'
 import { loadMoves } from '../repertoire/repo'
 import type { RepMove } from '../repertoire/types'
 import { hardCards, trainingStats } from '../training/cards'
-import { prepareSession, type SessionMode, type TrainingLine } from '../training/prepare'
+import {
+  drillSession,
+  prepareSession,
+  type SessionMode,
+  type TrainingLine,
+} from '../training/prepare'
 import { DEFAULT_NEW_PER_DAY, NEW_PER_DAY_KEY, recordAnswer, syncAllCards } from '../training/repo'
 
 const DAY_NAMES = ['oggi', 'dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab']
 
 export function Allenamento() {
-  const [session, setSession] = useState<{ mode: SessionMode; lines: TrainingLine[] }>()
+  const [session, setSession] = useState<{
+    mode: SessionMode | 'drill'
+    lines: TrainingLine[]
+    title?: string
+  }>()
+  const [drillRep, setDrillRep] = useState('')
   useEffect(() => {
     void syncAllCards(db)
   }, [])
@@ -33,6 +43,16 @@ export function Allenamento() {
   if (!data) return <PageHeader title="Allenamento" />
   const stats = trainingStats(data.cards, data.logs, now)
   const newLimit = Math.max(0, data.newPerDay - stats.introducedToday)
+
+  async function startDrill() {
+    const rep = data!.reps.find((r) => r.id === drillRep) ?? data!.reps[0]
+    if (!rep) return
+    setSession({
+      mode: 'drill',
+      lines: drillSession(rep, await loadMoves(db, rep.id)),
+      title: rep.name,
+    })
+  }
 
   async function start(mode: SessionMode) {
     const movesByRep = new Map<string, RepMove[]>()
@@ -71,6 +91,7 @@ export function Allenamento() {
   }
 
   if (session) {
+    // Only "Impara" and "Ripassa" touch the schedule; the rest is free practice.
     const mode =
       session.mode === 'learn' ? 'learn' : session.mode === 'review' ? 'review' : 'practice'
     return (
@@ -81,7 +102,9 @@ export function Allenamento() {
               ? 'Impara'
               : session.mode === 'review'
                 ? 'Ripassa'
-                : 'Difficili'
+                : session.mode === 'drill'
+                  ? `Tutte le linee · ${session.title}`
+                  : 'Difficili'
           }
         />
         <Trainer
@@ -154,6 +177,37 @@ export function Allenamento() {
                 onClick={() => start('hard')}
               >
                 Esercitati
+              </button>
+            </div>
+          </div>
+
+          <div className={`${tile} mt-3`}>
+            <div className="text-sm text-stone-400">Tutte le linee di un repertorio</div>
+            <div className="text-xs text-stone-500">
+              Ripassa tutte le linee salvate di un repertorio, senza limiti: pratica libera, non
+              cambia i ripassi.
+            </div>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <select
+                aria-label="Repertorio da allenare"
+                value={drillRep || data.reps[0]?.id}
+                onChange={(e) => setDrillRep(e.target.value)}
+                className="min-w-0 flex-1 rounded-md bg-stone-800 px-3 py-2"
+              >
+                {[...data.reps]
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} ({r.color === 'white' ? 'Bianco' : 'Nero'})
+                    </option>
+                  ))}
+              </select>
+              <button
+                type="button"
+                className="rounded-md bg-amber-700 px-4 py-2 font-medium hover:bg-amber-600"
+                onClick={() => void startDrill()}
+              >
+                Allena tutte le linee
               </button>
             </div>
           </div>

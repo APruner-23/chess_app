@@ -1,5 +1,7 @@
 import { INITIAL_EPD } from '../chess/position'
-import { RepGraph } from '../repertoire/graph'
+import type { Color } from '../import/types'
+import { RepGraph, turnOf } from '../repertoire/graph'
+import { cardId } from './cards'
 import type { RepMove } from '../repertoire/types'
 
 /** One ply of a training line. */
@@ -27,6 +29,34 @@ export function pathTo(graph: RepGraph, epd: string, root = INITIAL_EPD): RepMov
   const path: RepMove[] = []
   for (let m = prev.get(epd); m; m = prev.get(m.fromEpd)) path.unshift(m)
   return path
+}
+
+/**
+ * Every saved line of a repertoire, from the start to each leaf: the user plays their
+ * main move, the app plays every prepared opponent reply in turn. All the user's moves
+ * are quizzed, in every line (free practice, so repeating a shared start is fine).
+ */
+export function allLines(graph: RepGraph, color: Color, repertoireId: string): Step[][] {
+  const lines: Step[][] = []
+  const walk = (epd: string, path: RepMove[], seen: Set<string>) => {
+    const own = turnOf(epd) === color
+    const next = own ? graph.children(epd).slice(0, 1) : graph.children(epd)
+    const fresh = next.filter((m) => !seen.has(m.toEpd))
+    if (fresh.length === 0) {
+      if (path.some((m) => turnOf(m.fromEpd) === color))
+        lines.push(
+          path.map((move) =>
+            turnOf(move.fromEpd) === color
+              ? { move, kind: 'quiz', cardId: cardId(repertoireId, move.fromEpd) }
+              : { move, kind: 'auto' },
+          ),
+        )
+      return
+    }
+    for (const m of fresh) walk(m.toEpd, [...path, m], new Set(seen).add(m.toEpd))
+  }
+  walk(INITIAL_EPD, [], new Set([INITIAL_EPD]))
+  return lines
 }
 
 /**

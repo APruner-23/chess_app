@@ -5,7 +5,7 @@ import { reachProbabilities } from '../../src/repertoire/coverage'
 import type { RepMove } from '../../src/repertoire/types'
 import { Rating, SLOW_MS, gradeAnswer, schedule } from '../../src/training/fsrs'
 import { cardId, hardCards, isDue, syncCards, trainingStats } from '../../src/training/cards'
-import { buildLines, pathTo } from '../../src/training/session'
+import { allLines, buildLines, pathTo } from '../../src/training/session'
 import type { ReviewLogEntry, TrainingCard } from '../../src/training/types'
 
 const DAY = 86_400_000
@@ -201,5 +201,34 @@ describe('session preparation', () => {
     expect(shown.flatMap((l) => l.steps).every((s) => s.cardId === undefined)).toBe(true)
     expect(recall.flatMap((l) => l.steps).some((s) => s.kind === 'learn')).toBe(false)
     expect(recall.flatMap((l) => l.steps).filter((s) => s.cardId)).toHaveLength(2)
+  })
+
+  it("drills every saved line of a repertoire, quizzing all the user's moves", async () => {
+    const { drillSession } = await import('../../src/training/prepare')
+    const lines = allLines(graph, 'white', 'r')
+    const sans = lines.map((l) => l.map((s) => s.move.san).join(' ')).sort()
+    expect(sans).toEqual(['e4 c5 Nf3', 'e4 e5 Nf3 Nc6 Bb5'])
+    for (const l of lines) {
+      expect(l.filter((s) => s.kind === 'quiz').map((s) => s.cardId)).toEqual(
+        l.filter((_, i) => i % 2 === 0).map((s) => cardId('r', s.move.fromEpd)),
+      )
+      expect(l.filter((_, i) => i % 2 === 1).every((s) => s.kind === 'auto')).toBe(true)
+    }
+    // Black: the opponent's moves are automatic, every White reply is a separate line.
+    const black = new RepGraph(line(line([], ['e4', 'c6', 'd4', 'd5']), ['d4', 'd5']))
+    const bl = allLines(black, 'black', 'b')
+    expect(bl.map((l) => l.map((s) => s.kind).join(','))).toEqual([
+      'auto,quiz,auto,quiz',
+      'auto,quiz',
+    ])
+    const rep = {
+      id: 'r',
+      name: 'R',
+      color: 'white' as const,
+      experimental: false,
+      createdAt: 0,
+      updatedAt: 0,
+    }
+    expect(drillSession(rep, moves, () => 0)).toHaveLength(2)
   })
 })

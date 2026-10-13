@@ -2,7 +2,7 @@ import type { Color } from '../import/types'
 import { RepGraph } from '../repertoire/graph'
 import type { Repertoire, RepMove } from '../repertoire/types'
 import { hardCards, isDue } from './cards'
-import { buildLines, type Step } from './session'
+import { allLines, buildLines, type Step } from './session'
 import type { ReviewLogEntry, TrainingCard } from './types'
 
 export type SessionMode = 'learn' | 'review' | 'hard'
@@ -25,6 +25,27 @@ export interface SessionInput {
   newLimit: number
   /** Probability of meeting each card's position, used to pick new cards. */
   reach: (card: TrainingCard) => number
+}
+
+/**
+ * Free practice on one repertoire: all its saved lines, in random order (`random` is
+ * injectable for tests). Nothing is scheduled: the answers don't touch the reviews.
+ */
+export function drillSession(
+  rep: Repertoire,
+  moves: readonly RepMove[],
+  random: () => number = Math.random,
+): TrainingLine[] {
+  const lines = allLines(new RepGraph(moves), rep.color, rep.id).map((steps) => ({
+    repertoireId: rep.id,
+    color: rep.color,
+    steps,
+  }))
+  for (let i = lines.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1))
+    ;[lines[i], lines[j]] = [lines[j]!, lines[i]!]
+  }
+  return lines
 }
 
 /** Picks the cards for a session and turns them into lines, repertoire by repertoire. */
