@@ -34,7 +34,10 @@ export function Repertori() {
   return (
     <>
       <PageHeader title="Repertori">
-        Prepara le linee che incontri davvero: l'explorer mostra cosa si gioca al tuo livello.
+        Prepara le linee che incontri davvero: l'explorer mostra cosa si gioca al tuo livello.{' '}
+        <Link to="/scouting" className="text-emerald-400 hover:underline">
+          Prepararti contro un avversario →
+        </Link>
       </PageHeader>
 
       <section className="mb-6 flex flex-wrap items-end gap-2 rounded-lg border border-stone-800 bg-stone-950/40 p-4">

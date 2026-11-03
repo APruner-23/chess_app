@@ -299,7 +299,17 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
         {formatDate(game.playedAt)} · {game.eco} {game.openingName} ·{' '}
         <a href={game.url} target="_blank" rel="noreferrer" className="hover:underline">
           apri su {SITE_LABELS[game.site]}
-        </a>
+        </a>{' '}
+        ·{' '}
+        <Link
+          to={`/scouting?${new URLSearchParams({
+            site: game.site,
+            user: (game.userColor === 'white' ? game.black : game.white).name,
+          })}`}
+          className="hover:underline"
+        >
+          scouting dell'avversario
+        </Link>
       </p>
 
       <div className="flex flex-col gap-4 lg:flex-row">

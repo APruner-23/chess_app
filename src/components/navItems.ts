@@ -35,6 +35,7 @@ export const Editor = page(() => import('../pages/Editor'), 'Editor')
 export const Puzzle = page(() => import('../pages/Puzzle'), 'Puzzle')
 export const Sparring = page(() => import('../pages/Sparring'), 'Sparring')
 export const Finali = page(() => import('../pages/Finali'), 'Finali')
+export const Scouting = page(() => import('../pages/Scouting'), 'Scouting')
 export const OAuth = page(() => import('../pages/OAuth'), 'OAuth')
 
 export interface NavItem {

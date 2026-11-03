@@ -70,7 +70,12 @@ export async function saveGames(
   return games.length
 }
 
-async function fetchOk(url: string, opts: ImportOptions, init?: RequestInit): Promise<Response> {
+/** GET with the import's retry policy: waits a minute on a 429, explains a 404. */
+export async function fetchOk(
+  url: string,
+  opts: Pick<ImportOptions, 'fetch' | 'signal' | 'sleep'>,
+  init?: RequestInit,
+): Promise<Response> {
   const doFetch = opts.fetch ?? fetch
   const sleep = opts.sleep ?? defaultSleep
   for (let attempt = 0; ; attempt++) {
