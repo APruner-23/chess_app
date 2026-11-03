@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { DraftFromGames } from '../components/DraftFromGames'
 import { PageHeader } from '../components/PageHeader'
 import { db } from '../db/schema'
 import type { Color } from '../import/types'
@@ -19,6 +20,7 @@ export function Repertori() {
   const [name, setName] = useState('')
   const [color, setColor] = useState<Color>('white')
   const [experimental, setExperimental] = useState(false)
+  const [drafting, setDrafting] = useState(false)
 
   async function create() {
     const rep = await createRepertoire(db, {
@@ -72,6 +74,21 @@ export function Repertori() {
           Crea repertorio
         </button>
       </section>
+
+      <details
+        className="mb-6 rounded-lg border border-stone-800 bg-stone-950/40 p-4"
+        onToggle={(e) => setDrafting((e.target as HTMLDetailsElement).open)}
+      >
+        <summary className="cursor-pointer font-medium">
+          Proponi un repertorio dalle tue partite
+        </summary>
+        {/* Loads the games only when opened. */}
+        {drafting && (
+          <div className="mt-3">
+            <DraftFromGames />
+          </div>
+        )}
+      </details>
 
       {reps?.length === 0 && <p className="text-stone-400">Nessun repertorio ancora.</p>}
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
