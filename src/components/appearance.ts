@@ -27,12 +27,15 @@ export interface Appearance {
 export const DEFAULT_APPEARANCE: Appearance = { theme: 'auto', board: 'brown', pieces: 'cburnett' }
 const STORAGE = 'appearance'
 
+/** The system prefers a light theme (false where the browser can't tell). */
+export function systemLight(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: light)').matches
+}
+
 /** Sets data-theme / data-board / data-pieces on <html> (see themes.css). */
 export function applyAppearance(a: Appearance) {
   const root = document.documentElement
-  const light =
-    a.theme === 'light' ||
-    (a.theme === 'auto' && matchMedia('(prefers-color-scheme: light)').matches)
+  const light = a.theme === 'light' || (a.theme === 'auto' && systemLight())
   root.dataset.theme = light ? 'light' : 'dark'
   root.dataset.board = a.board
   root.dataset.pieces = a.pieces

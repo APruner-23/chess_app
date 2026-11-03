@@ -36,6 +36,7 @@ export function Layout() {
     if (!appearance) return
     applyAppearance(appearance)
     // "Automatico" follows the system theme while the app is open.
+    if (typeof matchMedia !== 'function') return
     const media = matchMedia('(prefers-color-scheme: light)')
     const onChange = () => applyAppearance(appearance)
     media.addEventListener('change', onChange)
