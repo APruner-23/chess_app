@@ -8,6 +8,7 @@ import type { Account } from '../db/schema'
 import type { Site } from '../import/types'
 import { PRESET_KEY, defaultPreset } from '../components/analysisStore'
 import { LichessSettings } from '../components/LichessSettings'
+import { AppearanceSettings } from '../components/AppearanceSettings'
 import { BackupSettings } from '../components/BackupSettings'
 import { SyncSettings } from '../components/SyncSettings'
 import { DEFAULT_NEW_PER_DAY, NEW_PER_DAY_KEY } from '../training/repo'
@@ -151,6 +152,8 @@ function SettingsForm({ accounts }: { accounts: Account[] }) {
         />
         Suoni (mosse, catture, risposte giuste e sbagliate) su questo dispositivo
       </label>
+
+      <AppearanceSettings />
 
       <LichessSettings />
       <SyncSettings />

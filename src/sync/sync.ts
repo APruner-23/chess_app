@@ -37,6 +37,10 @@ export const DEVICE_SETTINGS = new Set([
   AUTO_ANALYZE_SETTING,
   DEVICE_ID_SETTING,
   SOUNDS_SETTING,
+  // Appearance (components/appearance.ts): each device keeps its own.
+  'theme',
+  'boardTheme',
+  'pieceSet',
 ])
 
 export interface SyncState {

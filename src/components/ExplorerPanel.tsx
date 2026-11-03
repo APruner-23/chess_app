@@ -130,9 +130,9 @@ function MoveTable({
                 >
                   {(
                     [
-                      [r.white, 'bg-stone-100 text-stone-900'],
-                      [r.draws, 'bg-stone-500 text-white'],
-                      [r.black, 'bg-stone-950 text-stone-100'],
+                      [r.white, 'bg-[#f5f5f4] text-[#1c1917]'],
+                      [r.draws, 'bg-[#78716c] text-[#fafaf9]'],
+                      [r.black, 'bg-[#0c0a09] text-[#f5f5f4]'],
                     ] as const
                   ).map(([v, cls], i) => {
                     const pct = (v / n) * 100

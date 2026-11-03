@@ -48,7 +48,11 @@ export function EvalGraph({ evals, moves, advices, qualities, ply, onSelect }: E
     evals.map((e, i) => ({ ply: i + 1, win: winPercent(e), label: formatEval(e) })),
   )
   return (
-    <div className="h-28 w-full select-none" aria-label="Grafico della valutazione">
+    // Fixed dark panel: the light area is White's share and must stand out in both themes.
+    <div
+      className="h-28 w-full select-none rounded-md bg-[#1c1917]"
+      aria-label="Grafico della valutazione"
+    >
       <ResponsiveContainer>
         <AreaChart
           data={data}

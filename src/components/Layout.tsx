@@ -6,6 +6,14 @@ import { startAutoSync } from './syncStore'
 import { AUTO_ANALYZE_SETTING, SOUNDS_SETTING } from '../sync/sync'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { setSoundsEnabled } from './sound'
+import {
+  applyAppearance,
+  BOARD_KEY,
+  DEFAULT_APPEARANCE,
+  PIECES_KEY,
+  THEME_KEY,
+  type ThemeMode,
+} from './appearance'
 import { db } from '../db/schema'
 import { getSetting } from '../db/settings'
 
@@ -19,6 +27,20 @@ export function Layout() {
   useEffect(() => startAutoSync(), [])
   const sounds = useLiveQuery(() => getSetting(db, SOUNDS_SETTING, true))
   useEffect(() => setSoundsEnabled(sounds ?? true), [sounds])
+  const appearance = useLiveQuery(async () => ({
+    theme: await getSetting<ThemeMode>(db, THEME_KEY, DEFAULT_APPEARANCE.theme),
+    board: await getSetting(db, BOARD_KEY, DEFAULT_APPEARANCE.board),
+    pieces: await getSetting(db, PIECES_KEY, DEFAULT_APPEARANCE.pieces),
+  }))
+  useEffect(() => {
+    if (!appearance) return
+    applyAppearance(appearance)
+    // "Automatico" follows the system theme while the app is open.
+    const media = matchMedia('(prefers-color-scheme: light)')
+    const onChange = () => applyAppearance(appearance)
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [appearance])
   // Background analysis, if this device opted in: a few seconds after start, so the
   // first screen and the sync come first.
   useEffect(() => {

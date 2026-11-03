@@ -13,7 +13,8 @@ import {
 } from 'recharts'
 
 const AXIS = '#78716c'
-const GRID = '#292524'
+/** Translucent so the grid reads on both the dark and the light theme. */
+const GRID = 'rgb(120 113 108 / 0.25)'
 
 export interface BarSeries {
   key: string

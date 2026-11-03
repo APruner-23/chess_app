@@ -346,7 +346,7 @@ export function Dashboard() {
               <div className="h-56">
                 <ResponsiveContainer>
                   <LineChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
-                    <CartesianGrid stroke="#292524" vertical={false} />
+                    <CartesianGrid stroke="rgb(120 113 108 / 0.25)" vertical={false} />
                     <XAxis
                       dataKey="t"
                       type="number"

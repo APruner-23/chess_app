@@ -38,21 +38,21 @@ export function EvalBar({
   const atBottom = whiteAhead === (orientation === 'white')
   return (
     <div
-      className={`relative flex w-10 shrink-0 overflow-hidden rounded bg-stone-700 ${
+      className={`relative flex w-10 shrink-0 overflow-hidden rounded bg-[#44403c] ${
         orientation === 'white' ? 'flex-col-reverse' : 'flex-col'
       }`}
       title={label || undefined}
       aria-label={label ? `Valutazione ${label}` : 'Nessuna valutazione'}
     >
       <div
-        className="bg-stone-100 transition-[height] duration-300"
+        className="bg-[#f5f5f4] transition-[height] duration-300"
         style={{ height: `${white}%` }}
       />
       {label && (
         <span
           className={`absolute inset-x-0 text-center font-mono text-[11px] font-semibold tracking-tighter ${
             atBottom ? 'bottom-1' : 'top-1'
-          } ${whiteAhead ? 'text-stone-900' : 'text-stone-100'}`}
+          } ${whiteAhead ? 'text-[#1c1917]' : 'text-[#f5f5f4]'}`}
         >
           {label}
         </span>

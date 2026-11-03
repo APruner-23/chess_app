@@ -109,8 +109,8 @@ export function Repertori() {
                     aria-hidden
                     className={`inline-block h-3.5 w-3.5 rounded-full border ${
                       r.color === 'white'
-                        ? 'border-stone-300 bg-stone-100'
-                        : 'border-stone-400 bg-stone-950'
+                        ? 'border-[#d6d3d1] bg-[#f5f5f4]'
+                        : 'border-[#a8a29e] bg-[#0c0a09]'
                     }`}
                   />
                   {r.name}
