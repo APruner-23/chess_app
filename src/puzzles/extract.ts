@@ -3,19 +3,13 @@ import { makeFen } from 'chessops/fen'
 import { makeSan, parseSan } from 'chessops/san'
 import { makeUci, parseUci } from 'chessops'
 import { judgeMoves } from '../analysis/judgments'
-import { INITIAL_EVAL, winPercent } from '../analysis/winPercent'
+import { INITIAL_EVAL, winFor } from '../analysis/winPercent'
 import { phaseOf } from '../chess/phase'
-import type { Analysis, Color, Eval, Game } from '../import/types'
+import type { Analysis, Game } from '../import/types'
 import type { Puzzle } from './types'
 
 /** Below this win% (user's side) the position was already lost: not worth a puzzle. */
 export const MIN_WIN_BEFORE = 20
-
-/** Win% from `color`'s point of view. */
-export function winFor(e: Eval, color: Color): number {
-  const w = winPercent(e)
-  return color === 'white' ? w : 100 - w
-}
 
 /**
  * Puzzles from one analyzed game: every mistake or blunder of the user for which the

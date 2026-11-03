@@ -337,6 +337,16 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
             >
               ⏭
             </button>
+            <Link
+              className={btn}
+              title="Gioca contro il motore partendo da questa posizione"
+              to={`/sparring?${new URLSearchParams({
+                moves: [...game.moves.slice(0, ply), ...variation].join(','),
+                color: game.userColor,
+              })}`}
+            >
+              Gioca da qui
+            </Link>
             {summary && (
               <button
                 type="button"

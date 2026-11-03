@@ -1,4 +1,4 @@
-import type { Eval } from '../import/types'
+import type { Color, Eval } from '../import/types'
 
 /** lila Cp.CEILING: evals are clamped here and mates count as ±1000. */
 export const CP_CEILING = 1000
@@ -19,4 +19,10 @@ export function winningChances(e: Eval): number {
 /** Win% for White, 0…100. */
 export function winPercent(e: Eval): number {
   return 50 + 50 * winningChances(e)
+}
+
+/** Win% from `color`'s point of view. */
+export function winFor(e: Eval, color: Color): number {
+  const w = winPercent(e)
+  return color === 'white' ? w : 100 - w
 }

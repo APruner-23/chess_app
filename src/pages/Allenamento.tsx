@@ -27,6 +27,7 @@ import { DEFAULT_NEW_PER_DAY, NEW_PER_DAY_KEY, recordAnswer, syncAllCards } from
 const DAY_NAMES = ['oggi', 'dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab']
 
 export function Allenamento() {
+  const navigate = useNavigate()
   const [session, setSession] = useState<{
     mode: SessionMode | 'drill'
     lines: TrainingLine[]
@@ -258,6 +259,22 @@ export function Allenamento() {
         </>
       )}
       <PuzzleTile puzzles={data.puzzles} progress={data.puzzleProgress} now={now} />
+      <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-800 bg-stone-950/40 p-4">
+        <div>
+          <h2 className="text-lg font-semibold">Sparring contro il motore</h2>
+          <p className="text-sm text-stone-400">
+            Gioca contro Stockfish al livello che vuoi, anche dalla fine di una linea del tuo
+            repertorio, poi rivedi la partita con l'analisi.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/sparring')}
+          className="rounded-md bg-emerald-700 px-4 py-2 font-medium hover:bg-emerald-600"
+        >
+          Gioca
+        </button>
+      </section>
     </>
   )
 }

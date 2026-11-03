@@ -197,6 +197,18 @@ function RepertoireEditor({ rep }: { rep: Repertoire }) {
             >
               ◀
             </button>
+            <button
+              type="button"
+              className={btn}
+              title="Gioca una partita contro il motore partendo da questa posizione"
+              onClick={() =>
+                navigate(
+                  `/sparring?${new URLSearchParams({ moves: path.join(','), color: rep.color })}`,
+                )
+              }
+            >
+              Gioca da qui
+            </button>
             {missing >= 0 && (
               <button
                 type="button"
