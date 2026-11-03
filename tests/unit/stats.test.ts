@@ -106,3 +106,29 @@ describe('time stats', () => {
     expect(ph.reduce((n, p) => n + p.moves, 0)).toBeGreaterThan(50)
   })
 })
+
+describe('progress by month', () => {
+  it('groups games by month with score, analyzed accuracy and trends', async () => {
+    const { monthlyProgress, trend } = await import('../../src/stats/progress')
+    const rows = monthlyProgress(all, analyses, [])
+    expect(rows.reduce((n, r) => n + r.games, 0)).toBe(all.length)
+    expect(rows.map((r) => r.month)).toEqual([...rows.map((r) => r.month)].sort())
+    const lichessMonth = rows.find((r) => r.month === '2025-12')!
+    expect(lichessMonth.accuracy).toBeGreaterThan(40)
+    expect(lichessMonth.errorsPer100).toBeGreaterThan(0)
+    const sept = rows.find((r) => r.month === '2026-09')!
+    expect(sept.accuracy).toBeUndefined()
+    expect(sept.timeLosses).toBeGreaterThan(0)
+
+    const fake = [1, 2, 3, 4, 5, 6].map((i) => ({
+      month: `2026-0${i}`,
+      label: '',
+      games: 10,
+      score: i <= 3 ? 0.4 : 0.6,
+      timeLosses: 0,
+      inBook: 0,
+    }))
+    expect(trend(fake, 'score')).toEqual({ recent: 0.6, before: 0.4 })
+    expect(trend(fake.slice(0, 2), 'score')).toBeUndefined()
+  })
+})

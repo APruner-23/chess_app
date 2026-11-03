@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Bars } from '../components/charts'
+import { Bars, MonthLine } from '../components/charts'
 import { SERIES } from '../components/chartColors'
 import { CoachList } from '../components/CoachList'
 import { PageHeader } from '../components/PageHeader'
@@ -22,10 +22,61 @@ import {
   type Score,
 } from '../stats/games'
 import { errorsByPhase, timeStats } from '../stats/time'
+import { monthlyProgress, startMonth, trend, type ProgressKey } from '../stats/progress'
 
 const tile = 'rounded-lg border border-stone-800 bg-stone-950/40 p-4'
 const field = 'rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-sm'
 const pct = (v?: number, digits = 0) => (v === undefined ? '—' : `${(v * 100).toFixed(digits)}%`)
+const PROGRESS: {
+  key: ProgressKey
+  label: string
+  format: (v: number) => string
+  higherIsBetter: boolean
+  /** Changes smaller than this are not called better or worse. */
+  noise: number
+  domain?: [number | 'auto', number | 'auto']
+}[] = [
+  {
+    key: 'score',
+    label: 'Punteggio',
+    format: (v) => pct(v),
+    higherIsBetter: true,
+    noise: 0.03,
+    domain: [0, 1],
+  },
+  {
+    key: 'accuracy',
+    label: 'Accuratezza (partite analizzate)',
+    format: (v) => `${Math.round(v)}%`,
+    higherIsBetter: true,
+    noise: 2,
+  },
+  {
+    key: 'errorsPer100',
+    label: 'Errori ogni 100 mosse',
+    format: (v) => v.toFixed(1),
+    higherIsBetter: false,
+    noise: 0.5,
+    domain: [0, 'auto'],
+  },
+  {
+    key: 'timeLosses',
+    label: 'Partite perse per tempo',
+    format: (v) => pct(v),
+    higherIsBetter: false,
+    noise: 0.02,
+    domain: [0, 'auto'],
+  },
+  {
+    key: 'inBook',
+    label: 'Partite dentro un tuo repertorio',
+    format: (v) => pct(v),
+    higherIsBetter: true,
+    noise: 0.03,
+    domain: [0, 1],
+  },
+]
+
 const PERIODS: [string, string][] = [
   ['3', 'Ultimi 3 mesi'],
   ['12', 'Ultimi 12 mesi'],
@@ -74,6 +125,7 @@ export function Statistiche() {
     puzzles: await db.puzzles.toArray(),
     exits: await db.feedback.where('status').equals('info').toArray(),
     openFeedback: await db.feedback.where('status').equals('open').count(),
+    firstReview: (await db.reviewLogs.orderBy('reviewedAt').first())?.reviewedAt,
     reps: new Map((await db.repertoires.toArray()).map((r) => [r.id, r])),
   }))
   const [speed, setSpeed] = useState<Speed | '' | undefined>(
@@ -99,7 +151,18 @@ export function Statistiche() {
     )
     const analyses = new Map<string, Analysis>(data.analyses.map((a) => [a.id, a]))
     const analyzed = games.filter((g) => analyses.has(g.id)).length
+    // Training starts with the first repertoire or the first review, whichever came first.
+    const firstTraining = Math.min(
+      ...[...data.reps.values()].map((r) => r.createdAt),
+      data.firstReview ?? Infinity,
+    )
     return {
+      progress: monthlyProgress(
+        sp ? data.games.filter((g) => g.speed === sp) : data.games,
+        analyses,
+        data.exits,
+      ),
+      start: startMonth(Number.isFinite(firstTraining) ? firstTraining : undefined),
       coach: coachReport({
         games: data.games,
         analyses,
@@ -210,6 +273,44 @@ export function Statistiche() {
               sub={`su ${stats.total.wins} vittorie`}
             />
           </div>
+
+          {stats.progress.length >= 2 && (
+            <Section
+              title="Stai migliorando?"
+              note="Mese per mese, con la cadenza scelta (il periodo qui non si applica). Il confronto è tra gli ultimi 3 mesi e i 3 precedenti."
+            >
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {PROGRESS.map((p) => {
+                  const t = trend(stats.progress, p.key)
+                  const better = t && (p.higherIsBetter ? t.recent > t.before : t.recent < t.before)
+                  const marker = stats.progress.find((r) => r.month === stats.start)
+                  return (
+                    <div key={p.key}>
+                      <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
+                        <span className="text-stone-300">{p.label}</span>
+                        {t && Math.abs(t.recent - t.before) > p.noise && (
+                          <span
+                            className={`text-xs ${better ? 'text-emerald-400' : 'text-red-300'}`}
+                          >
+                            {better ? '▲ meglio' : '▼ peggio'}: {p.format(t.before)} →{' '}
+                            {p.format(t.recent)}
+                          </span>
+                        )}
+                      </div>
+                      <MonthLine
+                        data={stats.progress as unknown as Record<string, unknown>[]}
+                        dataKey={p.key}
+                        format={p.format}
+                        color={SERIES.user}
+                        {...(p.domain ? { domain: p.domain } : {})}
+                        {...(marker ? { marker: { at: marker.label, text: 'inizio app' } } : {})}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            </Section>
+          )}
 
           {time.games > 0 && (
             <div className="grid gap-4 lg:grid-cols-2">

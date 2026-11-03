@@ -3,6 +3,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Line,
+  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -112,6 +114,81 @@ export function Bars({
           </BarChart>
         </ResponsiveContainer>
       </div>
+    </div>
+  )
+}
+
+/**
+ * A small single-series line by month, with an optional vertical marker (e.g. when the
+ * user started training with the app).
+ */
+export function MonthLine({
+  data,
+  dataKey,
+  format,
+  color,
+  marker,
+  domain = ['auto', 'auto'],
+  height = 140,
+}: {
+  data: Record<string, unknown>[]
+  dataKey: string
+  format: (v: number) => string
+  color: string
+  /** Label (x value) where the marker goes, and its text. */
+  marker?: { at: string; text: string }
+  /** Y range, as Recharts takes it (e.g. [0, 1] for shares). */
+  domain?: [number | 'auto', number | 'auto']
+  height?: number
+}) {
+  return (
+    <div style={{ height }}>
+      <ResponsiveContainer>
+        <LineChart data={data} margin={{ top: 12, right: 8, bottom: 0, left: 0 }}>
+          <CartesianGrid stroke={GRID} vertical={false} />
+          <XAxis dataKey="label" stroke={AXIS} fontSize={11} tickLine={false} minTickGap={16} />
+          <YAxis
+            stroke={AXIS}
+            fontSize={11}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v: number) => format(v)}
+            width={44}
+            domain={domain}
+          />
+          {marker && (
+            <ReferenceLine
+              x={marker.at}
+              stroke={AXIS}
+              strokeDasharray="4 4"
+              label={{ value: marker.text, position: 'insideTopLeft', fill: AXIS, fontSize: 10 }}
+            />
+          )}
+          <Tooltip
+            isAnimationActive={false}
+            content={({ active, payload }) => {
+              const row = payload?.[0]?.payload as Record<string, unknown> | undefined
+              if (!active || !row || typeof row[dataKey] !== 'number') return null
+              return (
+                <div className="rounded border border-stone-700 bg-stone-900 px-2 py-1 text-xs">
+                  {String(row.label)}: {format(row[dataKey] as number)}
+                  <span className="text-stone-400"> · {row.games as number} partite</span>
+                </div>
+              )
+            }}
+          />
+          <Line
+            type="linear"
+            dataKey={dataKey}
+            stroke={color}
+            strokeWidth={2}
+            dot={{ r: 3, fill: color, stroke: color }}
+            activeDot={{ r: 5 }}
+            connectNulls
+            isAnimationActive={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   )
 }
