@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { makeSan } from 'chessops/san'
@@ -7,7 +7,6 @@ import { Board } from '../components/Board'
 import { EnginePanel } from '../components/EnginePanel'
 import { EvalBar } from '../components/EvalBar'
 import { PageHeader } from '../components/PageHeader'
-import { playSound } from '../components/sound'
 import { useBotMove } from '../components/useBotMove'
 import { BOARD_COLUMN } from '../components/format'
 import { figurine } from '../chess/figurine'
@@ -210,10 +209,6 @@ function Game({ setup, onNew }: { setup: Setup; onNew: () => void }) {
     ? { winner: setup.color === 'white' ? 'black' : 'white', reason: 'resign' }
     : gameEnd(fens)
   const botTurn = !end && turn !== setup.color
-  const winner = end ? (end.winner ?? 'draw') : undefined
-  useEffect(() => {
-    if (winner && winner !== 'draw') playSound(winner === setup.color ? 'success' : 'fail')
-  }, [winner, setup.color])
 
   /** Set once the bot has left the explorer statistics: from then on it is the engine. */
   const [leftBook, setLeftBook] = useState(!setup.realistic)

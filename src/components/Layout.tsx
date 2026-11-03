@@ -3,9 +3,8 @@ import { NavLink, Outlet } from 'react-router'
 import { navItems } from './navItems'
 import { UpdateBanner } from './UpdateBanner'
 import { startAutoSync } from './syncStore'
-import { AUTO_ANALYZE_SETTING, SOUNDS_SETTING } from '../sync/sync'
+import { AUTO_ANALYZE_SETTING } from '../sync/sync'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { setSoundsEnabled } from './sound'
 import {
   applyAppearance,
   BOARD_KEY,
@@ -25,8 +24,6 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 /** App shell: sidebar on desktop, bottom bar on phones, page content in the middle. */
 export function Layout() {
   useEffect(() => startAutoSync(), [])
-  const sounds = useLiveQuery(() => getSetting(db, SOUNDS_SETTING, true))
-  useEffect(() => setSoundsEnabled(sounds ?? true), [sounds])
   const appearance = useLiveQuery(async () => ({
     theme: await getSetting<ThemeMode>(db, THEME_KEY, DEFAULT_APPEARANCE.theme),
     board: await getSetting(db, BOARD_KEY, DEFAULT_APPEARANCE.board),

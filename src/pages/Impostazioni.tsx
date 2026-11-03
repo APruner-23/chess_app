@@ -15,7 +15,6 @@ import { DEFAULT_NEW_PER_DAY, NEW_PER_DAY_KEY } from '../training/repo'
 import type { Preset } from '../analysis/analyzeGame'
 import { DEFAULT_DAILY_GOAL } from '../training/activity'
 import { DAILY_GOAL_KEY } from '../training/activityRepo'
-import { SOUNDS_SETTING } from '../sync/sync'
 
 const PERIODS: { label: string; months: number | null }[] = [
   { label: 'Tutte le partite', months: null },
@@ -40,7 +39,6 @@ function SettingsForm({ accounts }: { accounts: Account[] }) {
   const preset = useLiveQuery(() => getSetting<Preset>(db, PRESET_KEY, defaultPreset()))
   const newPerDay = useLiveQuery(() => getSetting(db, NEW_PER_DAY_KEY, DEFAULT_NEW_PER_DAY))
   const goal = useLiveQuery(() => getSetting(db, DAILY_GOAL_KEY, DEFAULT_DAILY_GOAL))
-  const sounds = useLiveQuery(() => getSetting(db, SOUNDS_SETTING, true))
   const [names, setNames] = useState<Partial<Record<Site, string>>>(() =>
     Object.fromEntries(accounts.map((a) => [a.id, a.username])),
   )
@@ -143,14 +141,6 @@ function SettingsForm({ accounts }: { accounts: Account[] }) {
           onChange={(e) => setSetting(db, DAILY_GOAL_KEY, Math.max(1, Number(e.target.value) || 1))}
           className="w-20 rounded-md border border-stone-700 bg-stone-950 px-2 py-1"
         />
-      </label>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={sounds ?? true}
-          onChange={(e) => setSetting(db, SOUNDS_SETTING, e.target.checked)}
-        />
-        Suoni (mosse, catture, risposte giuste e sbagliate) su questo dispositivo
       </label>
 
       <AppearanceSettings />
