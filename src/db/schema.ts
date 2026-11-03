@@ -73,6 +73,7 @@ export class ChessDb extends Dexie {
   settings!: Table<Setting, string>
   puzzles!: Table<Puzzle, string>
   puzzleProgress!: Table<PuzzleProgress, string>
+  endgameProgress!: Table<PuzzleProgress, string>
 
   constructor(name = 'chess_app') {
     super(name)
@@ -102,6 +103,9 @@ export class ChessDb extends Dexie {
     this.version(6).stores({
       puzzles: 'id, gameId',
       puzzleProgress: 'id',
+    })
+    this.version(7).stores({
+      endgameProgress: 'id',
     })
   }
 }

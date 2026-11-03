@@ -140,7 +140,10 @@ export function coachReport(input: CoachInput): CoachReport {
         title: `${MOTIF_LABELS[motif]}: il ${pct(share)} dei tuoi errori`,
         detail: `${list.length} errori in ${analyzedGames.length} partite analizzate. Consiglio: ${MOTIF_ADVICE[motif]}.`,
         cost: errorBudget * (weight(list) / totalWeight),
-        action: { label: 'Allenati su questo tema', to: `/puzzle?mode=practice&motif=${motif}` },
+        action:
+          motif === 'endgame'
+            ? { label: 'Allena i finali', to: '/finali' }
+            : { label: 'Allenati su questo tema', to: `/puzzle?mode=practice&motif=${motif}` },
       })
     }
   }
@@ -165,7 +168,7 @@ export function coachReport(input: CoachInput): CoachReport {
         cost: allErrors ? errorBudget * (extra / allErrors) : 0,
         action:
           p.phase === 'endgame'
-            ? { label: 'Puzzle di finale', to: '/puzzle?mode=practice&phase=endgame' }
+            ? { label: 'Allena i finali', to: '/finali' }
             : { label: 'Ripassa i repertori', to: '/allenamento' },
       })
     }

@@ -13,6 +13,8 @@ import { RepGraph, turnOf } from '../repertoire/graph'
 import { loadMoves } from '../repertoire/repo'
 import type { RepMove } from '../repertoire/types'
 import { hardCards, trainingStats } from '../training/cards'
+import { ENDGAMES } from '../endgames/catalog'
+import { endgamesToday } from '../endgames/session'
 import { rebuildPuzzles } from '../puzzles/repo'
 import { puzzleStats } from '../puzzles/session'
 import { MOTIF_LABELS, type Motif } from '../puzzles/motifs'
@@ -46,6 +48,7 @@ export function Allenamento() {
     newPerDay: await getSetting(db, NEW_PER_DAY_KEY, DEFAULT_NEW_PER_DAY),
     puzzles: await db.puzzles.toArray(),
     puzzleProgress: await db.puzzleProgress.toArray(),
+    endgameProgress: await db.endgameProgress.toArray(),
   }))
   const [now] = useState(() => Date.now())
 
@@ -271,6 +274,27 @@ export function Allenamento() {
         sub="Le posizioni delle tue partite in cui hai sbagliato: trova la mossa giusta."
       />
       <PuzzleTile puzzles={data.puzzles} progress={data.puzzleProgress} now={now} />
+      <SectionTitle
+        icon="♚"
+        title="Finali"
+        sub="I finali essenziali contro il motore al massimo: matti di base, re e pedone, Lucena e Philidor."
+      />
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-800 bg-stone-950/40 p-4">
+        <div>
+          <h3 className="font-medium">Finali essenziali</h3>
+          <p className="text-sm text-stone-400">
+            {endgamesToday(new Map(data.endgameProgress.map((p) => [p.id, p])), now).length} da fare
+            oggi · {data.endgameProgress.length} di {ENDGAMES.length} provati
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/finali')}
+          className="rounded-md bg-emerald-700 px-4 py-2 font-medium hover:bg-emerald-600"
+        >
+          Apri
+        </button>
+      </section>
       <SectionTitle icon="♔" title="Sparring" />
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-800 bg-stone-950/40 p-4">
         <div>

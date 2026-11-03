@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { makeSan } from 'chessops/san'
@@ -7,34 +7,30 @@ import { Board } from '../components/Board'
 import { EnginePanel } from '../components/EnginePanel'
 import { EvalBar } from '../components/EvalBar'
 import { PageHeader } from '../components/PageHeader'
+import { useBotMove } from '../components/useBotMove'
 import { BOARD_COLUMN } from '../components/format'
 import { figurine } from '../chess/figurine'
 import { outcomeOf, replaySan } from '../chess/position'
 import { db } from '../db/schema'
 import { getSetting, setSetting } from '../db/settings'
-import { engineQueue } from '../engine/instance'
 import type { Color, Eval } from '../import/types'
 import { positionFromEpd } from '../repertoire/graph'
 import { loadMoves } from '../repertoire/repo'
 import { allLines } from '../training/session'
 import { RepGraph } from '../repertoire/graph'
-import {
-  BOT_LEVELS,
-  BOT_MULTI_PV,
-  endText,
-  gameEnd,
-  pickBotMove,
-  type GameEnd,
-} from '../sparring/bot'
+import { BOT_LEVELS, endText, gameEnd, type GameEnd } from '../sparring/bot'
 
 const LEVEL_KEY = 'sparringLevel'
-/** The bot never answers faster than this, so its moves can be followed. */
-const MIN_THINK_MS = 500
+const REALISTIC_KEY = 'sparringRealistic'
+/** The realistic opponent uses the explorer up to this ply at most. */
+const BOOK_PLIES = 24
 
 interface Setup {
   moves: string[]
   color: Color
   level: number
+  /** In the opening the bot plays what players of the user's level play (explorer). */
+  realistic: boolean
   /** Where the game started from, shown in the header. */
   from: string
 }
@@ -77,10 +73,14 @@ function SetupForm({ onStart }: { onStart: (s: Setup) => void }) {
   const [color, setColor] = useState<Color | 'random'>(givenColor ?? 'white')
   const [level, setLevel] = useState<number>()
   const lvl = level ?? savedLevel ?? 2
+  const savedRealistic = useLiveQuery(() => getSetting(db, REALISTIC_KEY, true))
+  const [realisticChoice, setRealistic] = useState<boolean>()
+  const realistic = realisticChoice ?? savedRealistic ?? true
   const rep = reps?.find((r) => r.id === start)
 
   async function go() {
     void setSetting(db, LEVEL_KEY, lvl)
+    void setSetting(db, REALISTIC_KEY, realistic)
     let moves: string[] = []
     let from = 'posizione iniziale'
     let c: Color = color === 'random' ? (Math.random() < 0.5 ? 'white' : 'black') : color
@@ -94,7 +94,7 @@ function SetupForm({ onStart }: { onStart: (s: Setup) => void }) {
       c = rep.color
       from = `fine di una linea di ${rep.name}`
     }
-    onStart({ moves, color: c, level: lvl, from })
+    onStart({ moves, color: c, level: lvl, from, realistic })
   }
 
   const field = 'rounded-md bg-stone-800 px-3 py-2'
@@ -149,6 +149,22 @@ function SetupForm({ onStart }: { onStart: (s: Setup) => void }) {
           all'ultimo gioca sempre la migliore.
         </span>
       </label>
+      <label className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          checked={realistic}
+          onChange={(e) => setRealistic(e.target.checked)}
+          className="mt-1"
+        />
+        <span>
+          Avversario realistico in apertura
+          <span className="block text-xs text-stone-500">
+            Finché la posizione è comune, il motore gioca le mosse che scelgono davvero i giocatori
+            del tuo livello (statistiche di Lichess, se sono già in memoria o se hai collegato
+            Lichess); poi gioca lui.
+          </span>
+        </span>
+      </label>
       <button
         type="button"
         onClick={() => void go()}
@@ -194,34 +210,20 @@ function Game({ setup, onNew }: { setup: Setup; onNew: () => void }) {
     : gameEnd(fens)
   const botTurn = !end && turn !== setup.color
 
-  // The bot's move: candidate lines from the engine, then a pick weighted by the level.
-  useEffect(() => {
-    if (!botTurn) return
-    const level = BOT_LEVELS[setup.level]!
-    const started = performance.now()
-    const handle = engineQueue('live').submit(
-      { fen, multiPv: BOT_MULTI_PV, nodes: level.nodes },
-      'live',
-    )
-    let timer: ReturnType<typeof setTimeout> | undefined
-    let live = true
-    handle.result.then(
-      ({ lines, bestMove }) => {
-        if (!live) return
-        const uci = pickBotMove(lines, turn, level) ?? bestMove
-        const san = uci && sanOf(fen, uci)
-        if (!san) return
-        const wait = Math.max(0, MIN_THINK_MS - (performance.now() - started))
-        timer = setTimeout(() => live && setMoves((m) => [...m, san]), wait)
-      },
-      () => {},
-    )
-    return () => {
-      live = false
-      clearTimeout(timer)
-      handle.cancel()
-    }
-  }, [botTurn, fen, turn, setup.level])
+  /** Set once the bot has left the explorer statistics: from then on it is the engine. */
+  const [leftBook, setLeftBook] = useState(!setup.realistic)
+  const [lastBook, setLastBook] = useState<number>()
+  useBotMove({
+    fen,
+    active: botTurn,
+    level: BOT_LEVELS[setup.level]!,
+    book: !leftBook && moves.length < BOOK_PLIES,
+    onMove: (san, info) => {
+      if (!info.book) setLeftBook(true)
+      setLastBook(info.book?.share)
+      setMoves((m) => [...m, san])
+    },
+  })
 
   const onMove = useCallback(
     (uci: string) => {
@@ -300,6 +302,12 @@ function Game({ setup, onNew }: { setup: Setup; onNew: () => void }) {
             <p className="text-lg text-stone-400">Il motore pensa…</p>
           ) : (
             <p className="text-lg">Tocca a te ({setup.color === 'white' ? 'Bianco' : 'Nero'}).</p>
+          )}
+          {!end && lastBook !== undefined && (
+            <p className="mt-1 text-sm text-stone-400">
+              📖 L'ultima mossa del motore è una mossa tipica: la gioca il{' '}
+              {Math.round(lastBook * 100)}% dei giocatori del tuo livello.
+            </p>
           )}
           {end && (
             <p className="mt-1 text-sm text-stone-400">

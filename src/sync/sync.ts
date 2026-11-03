@@ -15,6 +15,7 @@ export const SYNC_TABLES = [
   'cards',
   'reviewLogs',
   'puzzleProgress',
+  'endgameProgress',
   'feedback',
   'settings',
 ] as const

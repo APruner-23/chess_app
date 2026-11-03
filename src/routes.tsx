@@ -1,6 +1,6 @@
 import type { RouteObject } from 'react-router'
 import { Layout } from './components/Layout'
-import { Editor, OAuth, Partita, Puzzle, Sparring, navItems } from './components/navItems'
+import { Editor, OAuth, Partita, Finali, Puzzle, Sparring, navItems } from './components/navItems'
 import { NotFound } from './pages/NotFound'
 
 export const routes: RouteObject[] = [
@@ -15,6 +15,7 @@ export const routes: RouteObject[] = [
       { path: 'repertori/:id', element: <Editor /> },
       { path: 'puzzle', element: <Puzzle /> },
       { path: 'sparring', element: <Sparring /> },
+      { path: 'finali', element: <Finali /> },
       { path: 'oauth', element: <OAuth /> },
       { path: '*', element: <NotFound /> },
     ],

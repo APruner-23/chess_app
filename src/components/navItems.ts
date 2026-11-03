@@ -34,6 +34,7 @@ export const Partita = page(() => import('../pages/Partita'), 'Partita')
 export const Editor = page(() => import('../pages/Editor'), 'Editor')
 export const Puzzle = page(() => import('../pages/Puzzle'), 'Puzzle')
 export const Sparring = page(() => import('../pages/Sparring'), 'Sparring')
+export const Finali = page(() => import('../pages/Finali'), 'Finali')
 export const OAuth = page(() => import('../pages/OAuth'), 'OAuth')
 
 export interface NavItem {

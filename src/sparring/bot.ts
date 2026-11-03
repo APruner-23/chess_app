@@ -88,3 +88,30 @@ export function endText(end: GameEnd, user: Color): string {
       return 'Patta per la regola delle 50 mosse.'
   }
 }
+
+/** Below this many games a position's statistics are noise: the engine plays instead. */
+export const MIN_BOOK_GAMES = 20
+/** Moves played less often than this are left out (blunders seen once in a while). */
+const MIN_BOOK_SHARE = 0.03
+
+/**
+ * A "human" move from explorer statistics: picked at random with the frequency players
+ * of the user's level play it. Undefined when the position is too rare.
+ */
+export function pickBookMove(
+  moves: readonly { uci: string; san: string; white: number; draws: number; black: number }[],
+  random: () => number = Math.random,
+): { uci: string; san: string; share: number } | undefined {
+  const counted = moves.map((m) => ({ ...m, games: m.white + m.draws + m.black }))
+  const total = counted.reduce((a, m) => a + m.games, 0)
+  if (total < MIN_BOOK_GAMES) return undefined
+  const pool = counted.filter((m) => m.games / total >= MIN_BOOK_SHARE)
+  const poolTotal = pool.reduce((a, m) => a + m.games, 0)
+  let r = random() * poolTotal
+  for (const m of pool) {
+    r -= m.games
+    if (r <= 0) return { uci: m.uci, san: m.san, share: m.games / total }
+  }
+  const m = pool[pool.length - 1]
+  return m && { uci: m.uci, san: m.san, share: m.games / total }
+}
