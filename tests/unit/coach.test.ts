@@ -83,6 +83,29 @@ describe('coach', () => {
     expect(impact(tilt!.cost)).toBe('alto')
   })
 
+  it('shares the points lost to errors among motifs, leaving out "positional"', () => {
+    const games = Array.from({ length: 60 }, (_, i) => game({ result: i % 2 ? 'win' : 'loss' }))
+    const analyses = new Map(
+      games
+        .slice(0, 20)
+        .map((g) => [g.id, { id: g.id, source: 'local' as const, plies: [], updatedAt: 0 }]),
+    )
+    const puzzle = (gameId: string, motif: string, judgment: 'mistake' | 'blunder') =>
+      ({ id: `${gameId}|${motif}`, gameId, motif, judgment }) as never
+    const puzzles = [
+      ...Array.from({ length: 10 }, (_, i) => puzzle(games[i]!.id, 'other', 'mistake')),
+      ...Array.from({ length: 6 }, (_, i) => puzzle(games[i]!.id, 'hanging', 'blunder')),
+      ...Array.from({ length: 4 }, (_, i) => puzzle(games[i]!.id, 'fork', 'mistake')),
+    ]
+    const r = coachReport({ ...input(games), analyses, puzzles })
+    const motifs = r.weaknesses.filter((w) => w.id.startsWith('motif-'))
+    expect(motifs.map((w) => w.id)).toEqual(['motif-hanging', 'motif-fork'])
+    // Score 50%: 50 points lost per 100 games, half of them put down to errors.
+    const budget = 25
+    expect(motifs.reduce((a, w) => a + w.cost, 0)).toBeLessThanOrEqual(budget)
+    expect(motifs[0]!.cost).toBeCloseTo(budget * (12 / 26))
+  })
+
   it('stays quiet without games', () => {
     expect(coachReport(input([]))).toEqual({ games: 0, analyzed: 0, weaknesses: [], strengths: [] })
   })

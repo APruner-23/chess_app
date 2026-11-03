@@ -43,8 +43,14 @@ export interface CoachReport {
 /** Below this many analyzed games the error-based insights are not reliable. */
 export const MIN_ANALYZED = 10
 const MIN_GAMES = 50
-/** Rough points a mistake or a blunder costs. */
-const ERROR_COST = { mistake: 0.15, blunder: 0.3 }
+/** A blunder weighs twice a mistake when sharing out the points lost to errors. */
+const ERROR_WEIGHT = { mistake: 1, blunder: 2 }
+/**
+ * Share of the points the user loses that is put down to errors. A game is decided by
+ * several mistakes at once, so counting each one as lost points would add up to more
+ * than was ever lost: instead this budget is shared out among the motifs and phases.
+ */
+const ERROR_SHARE = 0.5
 
 const SPEED_IN: Record<Speed, string> = {
   bullet: 'In bullet',
@@ -113,44 +119,50 @@ export function coachReport(input: CoachInput): CoachReport {
     }
   }
 
-  // Tactical themes, from the puzzles of these games.
+  // Points lost per 100 games that are put down to errors, shared out below.
+  const errorBudget = (1 - overall) * 100 * ERROR_SHARE
+
+  // Tactical themes, from the puzzles of these games. "Positional" is what no theme
+  // explains: not something to train as such.
   const puzzles = input.puzzles.filter((p) => ids.has(p.gameId))
   if (analyzedGames.length >= MIN_ANALYZED && puzzles.length >= 5) {
+    const weight = (list: readonly Puzzle[]) =>
+      list.reduce((a, p) => a + ERROR_WEIGHT[p.judgment], 0)
+    const totalWeight = weight(puzzles)
     const byMotif = new Map<Motif, Puzzle[]>()
     for (const p of puzzles) byMotif.set(p.motif, [...(byMotif.get(p.motif) ?? []), p])
     for (const [motif, list] of byMotif) {
       const share = list.length / puzzles.length
-      if (list.length < 3 || share < 0.12) continue
-      const cost =
-        (list.reduce((a, p) => a + ERROR_COST[p.judgment], 0) / analyzedGames.length) * 100
+      if (motif === 'other' || list.length < 3 || share < 0.08) continue
       out.push({
         id: `motif-${motif}`,
         kind: 'weakness',
         title: `${MOTIF_LABELS[motif]}: il ${pct(share)} dei tuoi errori`,
         detail: `${list.length} errori in ${analyzedGames.length} partite analizzate. Consiglio: ${MOTIF_ADVICE[motif]}.`,
-        cost,
+        cost: errorBudget * (weight(list) / totalWeight),
         action: { label: 'Allenati su questo tema', to: `/puzzle?mode=practice&motif=${motif}` },
       })
     }
   }
 
-  // Phases: one much worse than the middlegame.
+  // Phases: one much worse than the middlegame. Its cost is the share of all errors
+  // that it adds beyond the middlegame rate.
   if (analyzedGames.length >= MIN_ANALYZED) {
     const phases = errorsByPhase(games, input.analyses)
     const mid = phases.find((p) => p.phase === 'middlegame')!
+    const allErrors = phases.reduce((a, p) => a + ((p.errorsPer100 ?? 0) * p.moves) / 100, 0)
     for (const p of phases) {
       if (p.phase === 'middlegame' || p.moves < 100 || !mid.errorsPer100 || !p.errorsPer100)
         continue
       const ratio = p.errorsPer100 / mid.errorsPer100
       if (ratio < 1.3) continue
-      const extraPerGame =
-        ((p.errorsPer100 - mid.errorsPer100) / 100) * (p.moves / analyzedGames.length)
+      const extra = ((p.errorsPer100 - mid.errorsPer100) / 100) * p.moves
       out.push({
         id: `phase-${p.phase}`,
         kind: 'weakness',
         title: `${p.phase === 'endgame' ? 'Nei finali' : 'In apertura'} sbagli ${ratio.toFixed(1)} volte più che nel mediogioco`,
         detail: `${p.errorsPer100.toFixed(1)} errori ogni 100 mosse in ${PHASE_LABELS[p.phase].toLowerCase()}, ${mid.errorsPer100.toFixed(1)} nel mediogioco.`,
-        cost: extraPerGame * 0.2 * 100,
+        cost: allErrors ? errorBudget * (extra / allErrors) : 0,
         action:
           p.phase === 'endgame'
             ? { label: 'Puzzle di finale', to: '/puzzle?mode=practice&phase=endgame' }
