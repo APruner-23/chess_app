@@ -1,4 +1,5 @@
 import type { Phase } from '../chess/phase'
+import type { Motif } from './motifs'
 import type { Color, Eval, Speed } from '../import/types'
 import type { StoredFsrs } from '../training/types'
 
@@ -24,6 +25,8 @@ export interface Puzzle {
   judgment: 'mistake' | 'blunder'
   /** The mistake was about a mate (allowing one, or missing one). */
   mate: boolean
+  /** Tactical theme (`classifyPuzzle`). */
+  motif: Motif
   /** Evals from White's point of view: with the best move, and after the game move. */
   evalBefore: Eval
   evalAfter: Eval

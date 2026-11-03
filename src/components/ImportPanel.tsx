@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/schema'
-import { BACKGROUND_GAMES, useAnalysisStore } from './analysisStore'
+import { getSetting, setSetting } from '../db/settings'
+import { AUTO_ANALYZE_KEY, useAnalysisStore } from './analysisStore'
 import { useImportStore } from './importStore'
 import { SITE_LABELS, SITES, useAccounts } from './accounts'
 
@@ -12,7 +13,9 @@ export function ImportPanel() {
   const counts = useLiveQuery(async () => ({
     games: await db.games.count(),
     analyzed: await db.analyses.count(),
+    auto: await getSetting(db, AUTO_ANALYZE_KEY, false),
   }))
+  const left = counts ? Math.max(0, counts.games - counts.analyzed) : 0
 
   const btn = 'rounded-md px-3 py-1.5 text-sm font-medium'
   return (
@@ -30,17 +33,38 @@ export function ImportPanel() {
           <button
             type="button"
             onClick={background.running ? pauseBackground : startBackground}
-            title="Il motore analizza le partite recenti senza analisi, una alla volta"
-            className={`${btn} bg-stone-700 hover:bg-stone-600`}
+            disabled={!background.running && left === 0}
+            title="Analisi rapida di tutte le partite senza analisi, una alla volta: prima le recenti, e tra queste prima le sconfitte"
+            className={`${btn} bg-stone-700 hover:bg-stone-600 disabled:opacity-40`}
           >
-            {background.running ? 'Pausa analisi' : `Analizza le ultime ${BACKGROUND_GAMES}`}
+            {background.running ? 'Pausa analisi' : 'Analizza tutte'}
           </button>
         )}
         {!!counts?.games && (
           <span className="text-stone-400">
-            {background.running ? `In analisi: ${background.done}/${background.total} · ` : ''}
+            {background.running
+              ? `In analisi: ${background.done}/${background.total}${
+                  background.etaMs !== undefined ? ` · ${formatEta(background.etaMs)}` : ''
+                } · `
+              : ''}
             {counts.analyzed} analizzate su {counts.games}
           </span>
+        )}
+        {!!counts?.games && (
+          <label
+            className="flex items-center gap-1.5 text-stone-400"
+            title="Solo su questo dispositivo: sul telefono consuma batteria"
+          >
+            <input
+              type="checkbox"
+              checked={counts.auto}
+              onChange={(e) => {
+                void setSetting(db, AUTO_ANALYZE_KEY, e.target.checked)
+                if (e.target.checked) void startBackground()
+              }}
+            />
+            Analizza da sola quando l'app è aperta
+          </label>
         )}
       </div>
       <ul className="mt-2 space-y-0.5">
@@ -64,4 +88,12 @@ export function ImportPanel() {
       </ul>
     </section>
   )
+}
+
+/** "circa 3 h 20 min rimaste" */
+function formatEta(ms: number): string {
+  const min = Math.round(ms / 60_000)
+  if (min < 1) return 'quasi finito'
+  const h = Math.floor(min / 60)
+  return `circa ${h ? `${h} h ` : ''}${min % 60} min rimasti`
 }

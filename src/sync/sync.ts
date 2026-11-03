@@ -23,7 +23,14 @@ export type SyncTable = (typeof SYNC_TABLES)[number]
 export const SYNC_KEY_SETTING = 'syncKey'
 export const SYNC_STATE_SETTING = 'syncState'
 /** Settings that never leave the device. */
-export const DEVICE_SETTINGS = new Set([TOKEN_KEY, SYNC_KEY_SETTING, SYNC_STATE_SETTING])
+/** Background analysis drains a phone's battery: each device decides (see analysisStore). */
+export const AUTO_ANALYZE_SETTING = 'autoAnalyze'
+export const DEVICE_SETTINGS = new Set([
+  TOKEN_KEY,
+  SYNC_KEY_SETTING,
+  SYNC_STATE_SETTING,
+  AUTO_ANALYZE_SETTING,
+])
 
 export interface SyncState {
   /** Server sequence number already pulled. */

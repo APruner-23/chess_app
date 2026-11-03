@@ -15,7 +15,8 @@ describe('app shell', () => {
     renderAt(path)
     // The home page greets the user instead of repeating its name.
     const name = path === '/' ? /^(Home|Buon)/ : label
-    expect(await screen.findByRole('heading', { level: 1, name })).toBeTruthy()
+    // Lazy pages can take more than the default second when the machine is busy.
+    expect(await screen.findByRole('heading', { level: 1, name }, { timeout: 5000 })).toBeTruthy()
   })
 
   it('shows a not-found page for unknown paths', () => {

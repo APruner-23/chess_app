@@ -15,6 +15,7 @@ import type { RepMove } from '../repertoire/types'
 import { hardCards, trainingStats } from '../training/cards'
 import { rebuildPuzzles } from '../puzzles/repo'
 import { puzzleStats } from '../puzzles/session'
+import { MOTIF_LABELS, type Motif } from '../puzzles/motifs'
 import type { Puzzle, PuzzleProgress } from '../puzzles/types'
 import {
   drillSession,
@@ -333,11 +334,15 @@ function PuzzleTile({
   const navigate = useNavigate()
   const [phase, setPhase] = useState('')
   const [blunders, setBlunders] = useState(false)
+  const [motif, setMotif] = useState('')
+  const motifCounts = new Map<Motif, number>()
+  for (const p of puzzles) motifCounts.set(p.motif, (motifCounts.get(p.motif) ?? 0) + 1)
   const stats = puzzleStats(puzzles, new Map(progress.map((p) => [p.id, p])), now)
   const todo = stats.due + stats.newToday
   const practice = new URLSearchParams({ mode: 'practice' })
   if (phase) practice.set('phase', phase)
   if (blunders) practice.set('judgment', 'blunder')
+  if (motif) practice.set('motif', motif)
   return (
     <section className="rounded-lg border border-stone-800 bg-stone-950/40 p-4">
       <h3 className="font-medium">Puzzle dai tuoi errori</h3>
@@ -380,6 +385,21 @@ function PuzzleTile({
                   {l}
                 </option>
               ))}
+            </select>
+            <select
+              aria-label="Tema dei puzzle"
+              value={motif}
+              onChange={(e) => setMotif(e.target.value)}
+              className="rounded-md bg-stone-800 px-3 py-2"
+            >
+              <option value="">Tutti i temi</option>
+              {[...motifCounts]
+                .sort((a, b) => b[1] - a[1])
+                .map(([m, n]) => (
+                  <option key={m} value={m}>
+                    {MOTIF_LABELS[m]} ({n})
+                  </option>
+                ))}
             </select>
             <label className="flex items-center gap-2 text-sm">
               <input

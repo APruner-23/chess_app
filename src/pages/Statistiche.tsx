@@ -1,11 +1,13 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Bars } from '../components/charts'
 import { SERIES } from '../components/chartColors'
+import { CoachList } from '../components/CoachList'
 import { PageHeader } from '../components/PageHeader'
 import { SPEED_LABELS } from '../components/format'
 import { PHASE_LABELS } from '../chess/phase'
+import { coachReport } from '../coach/insights'
 import { db } from '../db/schema'
 import type { Analysis, Color, Speed } from '../import/types'
 import { openingStats } from '../openings/stats'
@@ -65,11 +67,18 @@ const scoreSub = (s: Score) => `${s.games} partite · +${s.wins} =${s.draws} −
  * results by rating gap, time of day and previous result, openings by color.
  */
 export function Statistiche() {
+  const [params] = useSearchParams()
   const data = useLiveQuery(async () => ({
     games: await db.games.toArray(),
     analyses: await db.analyses.toArray(),
+    puzzles: await db.puzzles.toArray(),
+    exits: await db.feedback.where('status').equals('info').toArray(),
+    openFeedback: await db.feedback.where('status').equals('open').count(),
+    reps: new Map((await db.repertoires.toArray()).map((r) => [r.id, r])),
   }))
-  const [speed, setSpeed] = useState<Speed | ''>()
+  const [speed, setSpeed] = useState<Speed | '' | undefined>(
+    () => (params.get('speed') as Speed | null) ?? undefined,
+  )
   const [months, setMonths] = useState('12')
   const [now] = useState(() => Date.now())
 
@@ -91,6 +100,15 @@ export function Statistiche() {
     const analyses = new Map<string, Analysis>(data.analyses.map((a) => [a.id, a]))
     const analyzed = games.filter((g) => analyses.has(g.id)).length
     return {
+      coach: coachReport({
+        games: data.games,
+        analyses,
+        puzzles: data.puzzles,
+        exits: data.exits,
+        reps: data.reps,
+        openFeedback: data.openFeedback,
+        now,
+      }),
       games,
       analyzed,
       total: scoreOf(games.map((g) => g.result)),
@@ -136,6 +154,16 @@ export function Statistiche() {
         Come usi il tempo, dove sbagli e contro chi rendi di più.
       </PageHeader>
 
+      <section id="coach" className="mb-8 scroll-mt-4">
+        <h2 className="text-lg font-semibold">Cosa migliorare</h2>
+        <p className="mb-3 text-sm text-stone-400">
+          Il coach guarda le tue partite degli ultimi 12 mesi ({stats.coach.games}, di cui{' '}
+          {stats.coach.analyzed} analizzate) e mette in cima quello che ti costa più punti.
+        </p>
+        <CoachList report={stats.coach} />
+      </section>
+
+      <h2 className="mb-2 text-lg font-semibold">Statistiche dettagliate</h2>
       <div className="mb-4 flex flex-wrap gap-2">
         <select
           aria-label="Cadenza"

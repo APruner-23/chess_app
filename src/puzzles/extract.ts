@@ -6,6 +6,7 @@ import { judgeMoves } from '../analysis/judgments'
 import { INITIAL_EVAL, winFor } from '../analysis/winPercent'
 import { phaseOf } from '../chess/phase'
 import type { Analysis, Game } from '../import/types'
+import { classifyPuzzle } from './motifs'
 import type { Puzzle } from './types'
 
 /** Below this win% (user's side) the position was already lost: not worth a puzzle. */
@@ -40,11 +41,14 @@ export function extractPuzzles(game: Game, analysis: Analysis): Puzzle[] {
       const solutionSan = makeSan(pos, bestMove)
       if (solutionSan !== game.moves[ply] && winFor(evalBefore, game.userColor) >= MIN_WIN_BEFORE) {
         const opp = game.userColor === 'white' ? game.black : game.white
+        const fen = makeFen(pos.toSetup())
+        const evalAfter = evals[ply]!
+        const phase = phaseOf(pos.board, ply)
         puzzles.push({
           id: `${game.id}|${ply}`,
           gameId: game.id,
           ply,
-          fen: makeFen(pos.toSetup()),
+          fen,
           ...(prevUci ? { prevUci } : {}),
           solution: best!,
           solutionSan,
@@ -52,9 +56,18 @@ export function extractPuzzles(game: Game, analysis: Analysis): Puzzle[] {
           judgment: advice.judgment as 'mistake' | 'blunder',
           mate: advice.mate,
           evalBefore,
-          evalAfter: evals[ply]!,
+          evalAfter,
+          motif: classifyPuzzle({
+            fen,
+            solution: best!,
+            played: game.moves[ply]!,
+            color: game.userColor,
+            evalBefore,
+            evalAfter,
+            endgame: phase === 'endgame',
+          }),
           color: game.userColor,
-          phase: phaseOf(pos.board, ply),
+          phase,
           playedAt: game.playedAt,
           speed: game.speed,
           opponent: opp.name,

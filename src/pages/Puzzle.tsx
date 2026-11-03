@@ -6,6 +6,7 @@ import type { Phase } from '../chess/phase'
 import { db } from '../db/schema'
 import { recordPuzzle } from '../puzzles/repo'
 import { practicePuzzles, scheduledPuzzles } from '../puzzles/session'
+import { MOTIF_LABELS, type Motif } from '../puzzles/motifs'
 import type { Puzzle as PuzzleT } from '../puzzles/types'
 
 /**
@@ -30,6 +31,7 @@ export function Puzzle() {
             ...(params.get('judgment')
               ? { judgment: params.get('judgment') as PuzzleT['judgment'] }
               : {}),
+            ...(params.get('motif') ? { motif: params.get('motif') as Motif } : {}),
           })
       if (live) setPuzzles(list)
     })()
@@ -40,7 +42,13 @@ export function Puzzle() {
 
   return (
     <>
-      <PageHeader title={review ? 'Puzzle dai tuoi errori' : 'Puzzle · pratica libera'} />
+      <PageHeader
+        title={
+          review
+            ? 'Puzzle dai tuoi errori'
+            : `Puzzle · ${params.get('motif') ? MOTIF_LABELS[params.get('motif') as Motif] : 'pratica libera'}`
+        }
+      />
       {puzzles && (
         <PuzzleTrainer
           puzzles={puzzles}

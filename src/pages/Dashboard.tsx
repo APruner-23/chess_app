@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { CoachList } from '../components/CoachList'
 import { PageHeader } from '../components/PageHeader'
 import { SITE_LABELS } from '../components/accounts'
 import { SERIES } from '../components/chartColors'
@@ -25,6 +26,7 @@ import {
 import { processFeedback } from '../feedback/repo'
 import { groupKey } from '../feedback/compareGame'
 import { figurine } from '../chess/figurine'
+import { coachReport } from '../coach/insights'
 import type { GameResult, Site, Speed } from '../import/types'
 import { rebuildPuzzles } from '../puzzles/repo'
 import { puzzleStats } from '../puzzles/session'
@@ -186,6 +188,15 @@ export function Dashboard() {
         return [...map.values()].sort((a, b) => b.length - a.length).slice(0, 3)
       })(),
       lines: lineStats(data.exits, games, data.reps).slice(0, 10),
+      coach: coachReport({
+        games: data.games,
+        analyses: new Map(data.analyses.map((a) => [a.id, a])),
+        puzzles: data.puzzles,
+        exits: data.exits,
+        reps: data.reps,
+        openFeedback: data.openItems.length,
+        now,
+      }),
       vs: experimentalVsMain(data.exits, data.reps),
     }
   }, [data, now])
@@ -267,7 +278,17 @@ export function Dashboard() {
         />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+      <section className="mt-6">
+        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold">Il tuo coach: su cosa lavorare</h2>
+          <Link to="/statistiche#coach" className="text-sm text-emerald-400 hover:underline">
+            Tutti i consigli →
+          </Link>
+        </div>
+        <CoachList report={derived.coach} limit={3} />
+      </section>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Card title="Rating">
             <div

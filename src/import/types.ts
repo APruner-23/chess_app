@@ -54,6 +54,8 @@ export interface Analysis {
   /** plies[i] is the eval after ply i+1. */
   plies: PlyEval[]
   accuracy?: { white?: number; black?: number }
+  /** Local analyses: engine nodes per position (the quick background pass uses fewer). */
+  nodes?: number
   updatedAt: number
 }
 

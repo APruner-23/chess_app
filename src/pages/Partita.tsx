@@ -6,7 +6,7 @@ import { EvalBar } from '../components/EvalBar'
 import { EvalGraph } from '../components/EvalGraph'
 import { EnginePanel } from '../components/EnginePanel'
 import { SITE_LABELS } from '../components/accounts'
-import { useAnalysisStore } from '../components/analysisStore'
+import { BACKGROUND_NODES, useAnalysisStore } from '../components/analysisStore'
 import {
   RESULT_COLORS,
   RESULT_LABELS,
@@ -143,6 +143,8 @@ export function Partita() {
 function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
   const replay = useMemo(() => replaySan(game.moves), [game])
   const summary = useMemo(() => (analysis ? summarize(analysis) : undefined), [analysis])
+  /** Made by the quick background pass: can be redone at full depth. */
+  const quick = analysis?.nodes !== undefined && analysis.nodes <= BACKGROUND_NODES
   const qualities = useMemo(
     () =>
       analysis && summary
@@ -406,7 +408,24 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
                 <thead className="text-stone-400">
                   <tr>
                     <th className="text-left font-normal">
-                      {analysis!.source === 'lichess' ? 'Analisi di Lichess' : 'Analisi locale'}
+                      {analysis!.source === 'lichess'
+                        ? 'Analisi di Lichess'
+                        : quick
+                          ? 'Analisi rapida'
+                          : 'Analisi locale'}
+                      {quick &&
+                        (progress !== undefined ? (
+                          <span className="ml-2 text-xs">{Math.round(progress * 100)}%</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => analyze(game)}
+                            className="ml-2 rounded bg-stone-800 px-2 py-0.5 text-xs text-stone-200 hover:bg-stone-700"
+                            title="Rifà l'analisi con la profondità scelta in Impostazioni"
+                          >
+                            Approfondisci
+                          </button>
+                        ))}
                     </th>
                     <th className="font-normal">Bianco</th>
                     <th className="font-normal">Nero</th>

@@ -8,6 +8,7 @@ import { figurine } from '../chess/figurine'
 import { PHASE_LABELS } from '../chess/phase'
 import { engineQueue } from '../engine/instance'
 import { winFor } from '../analysis/winPercent'
+import { MOTIF_ADVICE, MOTIF_LABELS } from '../puzzles/motifs'
 import type { Puzzle } from '../puzzles/types'
 import { Board } from './Board'
 import { formatEval } from './evalFormat'
@@ -210,6 +211,10 @@ export function PuzzleTrainer({
               <p className="text-sm text-stone-300">
                 In partita: {moveNo} {figurine(p.played)}
                 {bad} ({formatEval(p.evalBefore)} → {formatEval(p.evalAfter)}).
+              </p>
+              <p className="text-sm text-stone-400">
+                Tema: <span className="text-stone-200">{MOTIF_LABELS[p.motif]}</span> ·{' '}
+                {MOTIF_ADVICE[p.motif]}.
               </p>
               <div className="flex flex-wrap gap-2 pt-1">
                 <button

@@ -3,6 +3,9 @@ import { NavLink, Outlet } from 'react-router'
 import { navItems } from './navItems'
 import { UpdateBanner } from './UpdateBanner'
 import { startAutoSync } from './syncStore'
+import { AUTO_ANALYZE_SETTING } from '../sync/sync'
+import { db } from '../db/schema'
+import { getSetting } from '../db/settings'
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
@@ -12,6 +15,15 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 /** App shell: sidebar on desktop, bottom bar on phones, page content in the middle. */
 export function Layout() {
   useEffect(() => startAutoSync(), [])
+  // Background analysis, if this device opted in: a few seconds after start, so the
+  // first screen and the sync come first.
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      if (await getSetting(db, AUTO_ANALYZE_SETTING, false))
+        void (await import('./analysisStore')).useAnalysisStore.getState().startBackground()
+    }, 5000)
+    return () => clearTimeout(t)
+  }, [])
   return (
     <div className="flex min-h-dvh">
       <nav className="hidden w-52 shrink-0 flex-col gap-1 border-r border-stone-800 p-3 md:flex">

@@ -55,3 +55,25 @@ describe('cross-check against Lichess server analysis', () => {
     }
   })
 })
+
+describe('background analysis order', () => {
+  it('puts recent games first, losses first within a period, and skips short games', async () => {
+    const { analysisOrder, etaMs } = await import('../../src/analysis/order')
+    const DAY = 86_400_000
+    const now = 1000 * DAY
+    const g = (id: string, daysAgo: number, result: 'win' | 'draw' | 'loss', plies = 40) =>
+      ({ id, playedAt: now - daysAgo * DAY, result, moves: Array(plies).fill('e4') }) as never
+    const games = [
+      g('old-loss', 400, 'loss'),
+      g('recent-win', 2, 'win'),
+      g('recent-loss', 5, 'loss'),
+      g('month-loss', 60, 'loss'),
+      g('short', 1, 'loss', 6),
+      g('done', 1, 'loss'),
+    ]
+    const order = analysisOrder(games, new Set(['done']), now).map((x: { id: string }) => x.id)
+    expect(order).toEqual(['recent-loss', 'recent-win', 'month-loss', 'old-loss'])
+    expect(etaMs(4, 80_000, 10)).toBe(200_000)
+    expect(etaMs(0, 0, 10)).toBeUndefined()
+  })
+})

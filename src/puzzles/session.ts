@@ -1,5 +1,6 @@
 import type { Phase } from '../chess/phase'
 import { startOfDay } from '../training/cards'
+import type { Motif } from './motifs'
 import type { Puzzle, PuzzleProgress } from './types'
 
 export const NEW_PUZZLES_PER_DAY = 10
@@ -76,6 +77,7 @@ export function scheduledPuzzles(
 export interface PracticeFilter {
   phase?: Phase
   judgment?: Puzzle['judgment']
+  motif?: Motif
 }
 
 /** Free practice: a random round among the puzzles matching the filter. */
@@ -88,7 +90,8 @@ export function practicePuzzles(
   const pool = puzzles.filter(
     (p) =>
       (!filter.phase || p.phase === filter.phase) &&
-      (!filter.judgment || p.judgment === filter.judgment),
+      (!filter.judgment || p.judgment === filter.judgment) &&
+      (!filter.motif || p.motif === filter.motif),
   )
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1))
