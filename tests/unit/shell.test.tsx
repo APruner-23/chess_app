@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { routes } from '../../src/routes'
 import { navItems } from '../../src/components/navItems'
 
@@ -9,6 +9,10 @@ function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
   render(<RouterProvider router={router} />)
 }
+
+// Unmount after each test: a page's live query resolving after the environment is torn
+// down otherwise throws "window is not defined".
+afterEach(cleanup)
 
 describe('app shell', () => {
   it.each(navItems)('renders the $label page at $path', async ({ path, label }) => {

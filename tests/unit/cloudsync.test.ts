@@ -145,3 +145,59 @@ describe('two devices', () => {
     expect(again.pulled).toBe(0)
   })
 })
+
+describe('two devices: training progress', () => {
+  it('shares puzzle, endgame and daily-goal progress; keeps derived and per-device data local', async () => {
+    const { recordPuzzle, refreshDerived } = await import('../../src/puzzles/repo')
+    const { recordEndgame } = await import('../../src/endgames/repo')
+    const { recordActivity } = await import('../../src/training/activityRepo')
+    const { dailyTotals } = await import('../../src/training/activity')
+    const { DEVICE_ID_SETTING, PUZZLE_SOURCES_SETTING, FEEDBACK_SOURCE_SETTING } =
+      await import('../../src/sync/sync')
+    const { processFeedback } = await import('../../src/feedback/repo')
+    const phone = await device()
+    const laptop = await device()
+    const raw = ndjsonLines<LichessGame>('lichess/malvoluto-analysed.ndjson')[0]!
+    const { game, analysis } = normalizeLichess(raw, 'MalVoluto')!
+    await laptop.games.put(game)
+    await laptop.analyses.put(analysis!)
+    await refreshDerived(laptop)
+    await processFeedback(laptop)
+    const puzzle = (await laptop.puzzles.toArray())[0]!
+    const today = new Date(2026, 10, 3, 12).getTime()
+
+    // Both devices train on the same day.
+    await recordPuzzle(laptop, puzzle.id, true, 3000, today)
+    await recordEndgame(laptop, 'mate-rook', false, today)
+    await recordActivity(laptop, 'puzzles', today)
+    await recordActivity(laptop, 'endgames', today)
+    await recordActivity(phone, 'reviews', today)
+    await recordActivity(phone, 'reviews', today)
+    await recordActivity(phone, 'reviews', today)
+
+    await sync(laptop)
+    await sync(phone)
+    await sync(laptop)
+
+    for (const db of [phone, laptop]) {
+      expect((await db.puzzleProgress.get(puzzle.id))?.lastCorrect).toBe(true)
+      expect((await db.endgameProgress.get('mate-rook'))?.lastCorrect).toBe(false)
+      // One row per device, summed per day: nothing overwritten.
+      const rows = await db.activity.toArray()
+      expect(rows).toHaveLength(2)
+      expect(dailyTotals(rows).get('2026-11-03')).toBe(5)
+    }
+    // Derived tables and device-only markers never travel.
+    expect(await phone.puzzles.count()).toBe(0)
+    expect(await phone.gameFacts.count()).toBe(0)
+    expect(await phone.analyses.count()).toBe(1) // the analysis itself does travel
+    expect(await getSetting(phone, PUZZLE_SOURCES_SETTING, null)).toBeNull()
+    expect(await getSetting(phone, FEEDBACK_SOURCE_SETTING, null)).toBeNull()
+    expect(await getSetting(phone, DEVICE_ID_SETTING, '')).not.toBe(
+      await getSetting(laptop, DEVICE_ID_SETTING, ''),
+    )
+    // The phone derives its own puzzles from the synced analysis.
+    await refreshDerived(phone)
+    expect(await phone.puzzles.count()).toBe(await laptop.puzzles.count())
+  })
+})
