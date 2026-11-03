@@ -5,6 +5,7 @@ import { figurine } from '../chess/figurine'
 import { positionFromEpd } from '../repertoire/graph'
 import type { TrainingLine } from '../training/prepare'
 import { Board } from './Board'
+import { playSound } from './sound'
 
 type Phase = 'play' | 'wrong' | 'correct'
 
@@ -62,9 +63,13 @@ export function Trainer({ lines, onAnswer, onExit }: TrainerProps) {
         setScore((s) => ({ right: s.right + (correct ? 1 : 0), total: s.total + 1 }))
       }
       if (correct) {
+        playSound('correct')
         setPhase('correct')
         setTimeout(advance, AUTO_DELAY)
-      } else setPhase('wrong')
+      } else {
+        playSound('wrong')
+        setPhase('wrong')
+      }
     },
     [step, phase, onAnswer, advance],
   )

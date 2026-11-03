@@ -11,6 +11,7 @@ import { winFor } from '../analysis/winPercent'
 import { MOTIF_ADVICE, MOTIF_LABELS } from '../puzzles/motifs'
 import type { Puzzle } from '../puzzles/types'
 import { Board } from './Board'
+import { playSound } from './sound'
 import { formatEval } from './evalFormat'
 import { BOARD_COLUMN, SPEED_LABELS, formatDate } from './format'
 
@@ -44,7 +45,7 @@ export function PuzzleTrainer({
   onExit,
 }: {
   puzzles: Puzzle[]
-  /** Called once per puzzle with the first attempt; omitted in free practice. */
+  /** Called once per puzzle with the first attempt. */
   onAnswer?: (id: string, correct: boolean, elapsedMs: number) => void
   onExit: () => void
 }) {
@@ -90,6 +91,7 @@ export function PuzzleTrainer({
           ev !== undefined && winFor(ev, p.color) >= winFor(p.evalBefore, p.color) - ALT_TOLERANCE
         const san = play(p.fen, uci)!.san
         answer(ok)
+        playSound(ok ? 'correct' : 'wrong')
         setState(
           ok
             ? { kind: 'solved', fen, uci, san, alt: true }
@@ -110,12 +112,15 @@ export function PuzzleTrainer({
       const r = play(p.fen, uci)
       if (!r) return
       if (r.san === p.solutionSan || r.mate) {
+        playSound('correct')
         answer(true)
         setState({ kind: 'solved', fen: r.fen, uci, san: r.san, alt: false })
       } else if (r.san === p.played) {
+        playSound('wrong')
         answer(false)
         setState({ kind: 'wrong', san: r.san, reason: 'game' })
       } else if (state.kind === 'wrong') {
+        playSound('wrong')
         setState({ kind: 'wrong', san: r.san, reason: 'worse' }) // after a miss, only the solution counts
       } else {
         setState({ kind: 'checking', fen: r.fen, uci })

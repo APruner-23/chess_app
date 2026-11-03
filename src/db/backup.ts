@@ -15,6 +15,7 @@ export const BACKUP_TABLES = [
   'reviewLogs',
   'puzzleProgress',
   'endgameProgress',
+  'activity',
   'feedback',
   'settings',
 ] as const

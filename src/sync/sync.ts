@@ -16,6 +16,7 @@ export const SYNC_TABLES = [
   'reviewLogs',
   'puzzleProgress',
   'endgameProgress',
+  'activity',
   'feedback',
   'settings',
 ] as const
@@ -26,11 +27,16 @@ export const SYNC_STATE_SETTING = 'syncState'
 /** Settings that never leave the device. */
 /** Background analysis drains a phone's battery: each device decides (see analysisStore). */
 export const AUTO_ANALYZE_SETTING = 'autoAnalyze'
+/** Identifies this device's activity rows; sounds on or off is a per-device choice. */
+export const DEVICE_ID_SETTING = 'deviceId'
+export const SOUNDS_SETTING = 'sounds'
 export const DEVICE_SETTINGS = new Set([
   TOKEN_KEY,
   SYNC_KEY_SETTING,
   SYNC_STATE_SETTING,
   AUTO_ANALYZE_SETTING,
+  DEVICE_ID_SETTING,
+  SOUNDS_SETTING,
 ])
 
 export interface SyncState {

@@ -4,6 +4,7 @@ import { Chess } from 'chessops/chess'
 import { parseFen } from 'chessops/fen'
 import { chessgroundDests } from 'chessops/compat'
 import type { Api } from '@lichess-org/chessground/api'
+import { playSound } from './sound'
 import type { DrawShape } from '@lichess-org/chessground/draw'
 import type { Key } from '@lichess-org/chessground/types'
 import '@lichess-org/chessground/assets/chessground.base.css'
@@ -103,6 +104,19 @@ export function Board({ fen, orientation = 'white', lastMove, arrows, glyph, onM
     }
     sync.current()
   }, [fen, orientation, lastMove, playable])
+
+  // A sound for every new move shown: check, capture (fewer pieces) or a plain move.
+  const shown = useRef<{ fen: string; lastMove?: string } | undefined>(undefined)
+  useEffect(() => {
+    const before = shown.current
+    shown.current = { fen, lastMove }
+    if (!before || !lastMove || lastMove === before.lastMove) return
+    const pieces = (f: string) => f.split(' ')[0]!.replace(/[^a-z]/gi, '').length
+    const setup = parseFen(fen)
+    const pos = setup.isOk ? Chess.fromSetup(setup.value) : undefined
+    const check = pos?.isOk === true && pos.value.isCheck()
+    playSound(check ? 'check' : pieces(fen) < pieces(before.fen) ? 'capture' : 'move')
+  }, [fen, lastMove])
 
   const arrowKey = arrows?.join(',') ?? ''
   const glyphKey = glyph ? `${glyph.square}|${glyphHtml(glyph)}` : ''

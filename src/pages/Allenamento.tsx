@@ -25,6 +25,7 @@ import {
   type SessionMode,
   type TrainingLine,
 } from '../training/prepare'
+import { recordActivity } from '../training/activityRepo'
 import { DEFAULT_NEW_PER_DAY, NEW_PER_DAY_KEY, recordAnswer, syncAllCards } from '../training/repo'
 
 const DAY_NAMES = ['oggi', 'dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab']
@@ -124,6 +125,7 @@ export function Allenamento() {
           onAnswer={(cardId, correct, ms) => {
             const card = data.cards.find((c) => c.id === cardId)
             if (card) void recordAnswer(db, card, mode, correct, ms)
+            void recordActivity(db, 'reviews')
           }}
           onExit={() => setSession(undefined)}
         />

@@ -77,3 +77,19 @@ describe('background analysis order', () => {
     expect(etaMs(0, 0, 10)).toBeUndefined()
   })
 })
+
+describe('key moments', () => {
+  it('keeps the biggest swings for the mover, in game order', async () => {
+    const { keyMoments } = await import('../../src/analysis/keyMoments')
+    // White blunders on ply 2 (+50 → −400), Black gives it back on ply 5 (−400 → +600).
+    const evals = [{ cp: 30 }, { cp: 50 }, { cp: -400 }, { cp: -380 }, { cp: -400 }, { cp: 600 }]
+    const m = keyMoments(evals)
+    expect(m.map((x) => [x.ply, x.color])).toEqual([
+      [2, 'white'],
+      [5, 'black'],
+    ])
+    expect(m[0]!.before).toBeGreaterThan(50)
+    expect(m[0]!.after).toBeLessThan(20)
+    expect(keyMoments(evals, 1).map((x) => x.ply)).toEqual([5])
+  })
+})

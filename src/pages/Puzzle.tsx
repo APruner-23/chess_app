@@ -5,6 +5,7 @@ import { PuzzleTrainer } from '../components/PuzzleTrainer'
 import type { Phase } from '../chess/phase'
 import { db } from '../db/schema'
 import { recordPuzzle } from '../puzzles/repo'
+import { recordActivity } from '../training/activityRepo'
 import { practicePuzzles, scheduledPuzzles } from '../puzzles/session'
 import { MOTIF_LABELS, type Motif } from '../puzzles/motifs'
 import type { Puzzle as PuzzleT } from '../puzzles/types'
@@ -52,9 +53,10 @@ export function Puzzle() {
       {puzzles && (
         <PuzzleTrainer
           puzzles={puzzles}
-          onAnswer={
-            review ? (id, correct, ms) => void recordPuzzle(db, id, correct, ms) : undefined
-          }
+          onAnswer={(id, correct, ms) => {
+            if (review) void recordPuzzle(db, id, correct, ms)
+            void recordActivity(db, 'puzzles')
+          }}
           onExit={() => navigate('/allenamento')}
         />
       )}

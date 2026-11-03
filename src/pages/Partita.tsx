@@ -16,6 +16,7 @@ import {
   BOARD_COLUMN,
 } from '../components/format'
 import { JUDGMENT_LABELS, JUDGMENT_SYMBOLS, summarize } from '../analysis/summary'
+import { keyMoments } from '../analysis/keyMoments'
 import {
   QUALITY_LABELS,
   QUALITY_SYMBOLS,
@@ -34,6 +35,12 @@ import { makeSan } from 'chessops/san'
 import { db } from '../db/schema'
 import type { Analysis, Eval, Game } from '../import/types'
 
+/** Singular labels for one move (the summary table uses the plural ones). */
+const JUDGMENT_ONE: Record<Judgment, string> = {
+  inaccuracy: 'Imprecisione',
+  mistake: 'Errore',
+  blunder: 'Errore grave',
+}
 const JUDGMENT_TEXT: Record<Judgment, string> = {
   inaccuracy: 'text-yellow-400',
   mistake: 'text-orange-400',
@@ -247,6 +254,36 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
       ([p, v]) => v === q && (p % 2 === 0) === (color === 'white'),
     ).length
 
+  const moments = useMemo(() => (evals ? keyMoments(evals) : []), [evals])
+  /** SAN of the engine's better move for the game move at index p, if known. */
+  const bestSanAt = (p: number) => {
+    const best = analysis?.plies[p]?.best
+    return best ? sanOf(replay.fens[p]!, best) : undefined
+  }
+  /** Shows the better move as a variation from the position before move p. */
+  const showBest = (p: number) => {
+    const san = bestSanAt(p)
+    if (!san) return
+    setPly(p)
+    setVariation([san])
+  }
+  const moveLabel = (p: number) =>
+    `${Math.floor(p / 2) + 1}${p % 2 === 0 ? '.' : '…'} ${figurine(game.moves[p]!)}`
+  /** The game move on screen, when it was a mistake: what should have been played. */
+  const current = !variation.length && ply > 0 ? summary?.advices.get(ply - 1) : undefined
+  const currentBest = current ? bestSanAt(ply - 1) : undefined
+
+  // Keeps the current move visible in the move list.
+  // Scrolls only the list, never the page (scrollIntoView would move the whole page).
+  useEffect(() => {
+    const item = document.querySelector<HTMLElement>(`[data-ply="${ply}"]`)
+    const list = item?.closest('ol')
+    if (!item || !list) return
+    const top = item.offsetTop
+    if (top < list.scrollTop || top + item.offsetHeight > list.scrollTop + list.clientHeight)
+      list.scrollTop = top - list.clientHeight / 2
+  }, [ply])
+
   const btn = 'rounded-md bg-stone-800 px-4 py-2 hover:bg-stone-700 disabled:opacity-40'
   return (
     <>
@@ -363,6 +400,27 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-3">
+          {current && (
+            <div className="rounded-lg border border-stone-800 bg-stone-950/40 p-3 text-sm">
+              <span className={`font-semibold ${JUDGMENT_TEXT[current.judgment]}`}>
+                {moveLabel(ply - 1)}
+                {JUDGMENT_SYMBOLS[current.judgment]} {JUDGMENT_ONE[current.judgment]}
+              </span>
+              {currentBest && (
+                <>
+                  {' '}
+                  · migliore era <span className="font-semibold">{figurine(currentBest)}</span>{' '}
+                  <button
+                    type="button"
+                    onClick={() => showBest(ply - 1)}
+                    className="ml-1 rounded bg-stone-800 px-2 py-0.5 hover:bg-stone-700"
+                  >
+                    Mostra
+                  </button>
+                </>
+              )}
+            </div>
+          )}
           <EnginePanel fen={fen} onBest={onBest} onPlay={playSans} />
 
           {varReplay && (
@@ -404,6 +462,45 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
                 ply={ply}
                 onSelect={go}
               />
+              {moments.length > 0 && (
+                <div className="rounded-lg bg-stone-950/40 p-3 text-sm">
+                  <div className="mb-1 text-stone-400">Momenti chiave</div>
+                  <ul className="space-y-1">
+                    {moments.map((m) => {
+                      const advice = summary.advices.get(m.ply)
+                      const best = bestSanAt(m.ply)
+                      const who = m.color === game.userColor ? 'Tu passi' : "L'avversario passa"
+                      return (
+                        <li key={m.ply} className="flex flex-wrap items-center gap-x-2">
+                          <button
+                            type="button"
+                            onClick={() => go(m.ply + 1)}
+                            className={`rounded px-1 font-semibold hover:bg-stone-800 ${
+                              advice ? JUDGMENT_TEXT[advice.judgment] : ''
+                            }`}
+                          >
+                            {moveLabel(m.ply)}
+                            {advice ? JUDGMENT_SYMBOLS[advice.judgment] : ''}
+                          </button>
+                          <span className="text-stone-300">
+                            {who} dal {Math.round(m.before)}% al {Math.round(m.after)}% di
+                            probabilità di vittoria
+                          </span>
+                          {best && (
+                            <button
+                              type="button"
+                              onClick={() => showBest(m.ply)}
+                              className="rounded bg-stone-800 px-2 py-0.5 text-xs hover:bg-stone-700"
+                            >
+                              Migliore: {figurine(best)}
+                            </button>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )}
               <table className="text-sm">
                 <thead className="text-stone-400">
                   <tr>
@@ -493,7 +590,7 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
             </div>
           )}
 
-          <ol className="grid max-h-[360px] grid-cols-[3rem_1fr_1fr] content-start overflow-y-auto rounded-lg bg-stone-950/40 p-2 text-sm">
+          <ol className="relative order-first grid max-h-40 grid-cols-[3rem_1fr_1fr] content-start overflow-y-auto rounded-lg bg-stone-950/40 p-2 text-sm lg:order-none lg:max-h-[360px]">
             {Array.from({ length: Math.ceil(last / 2) }, (_, i) => (
               <li key={i} className="contents">
                 <span className="py-1 pr-2 text-right text-stone-500">{i + 1}.</span>
@@ -505,6 +602,7 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
                     <button
                       key={p}
                       type="button"
+                      data-ply={p + 1}
                       onClick={() => go(p + 1)}
                       title={
                         quality

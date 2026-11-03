@@ -1,3 +1,4 @@
+import type { ActivityDay } from '../training/activity'
 import type { Puzzle, PuzzleProgress } from '../puzzles/types'
 import Dexie, { type Table } from 'dexie'
 import type { Analysis, Color, Game, GameResult, Site, Speed } from '../import/types'
@@ -74,6 +75,7 @@ export class ChessDb extends Dexie {
   puzzles!: Table<Puzzle, string>
   puzzleProgress!: Table<PuzzleProgress, string>
   endgameProgress!: Table<PuzzleProgress, string>
+  activity!: Table<ActivityDay, string>
 
   constructor(name = 'chess_app') {
     super(name)
@@ -106,6 +108,9 @@ export class ChessDb extends Dexie {
     })
     this.version(7).stores({
       endgameProgress: 'id',
+    })
+    this.version(8).stores({
+      activity: 'id, day',
     })
   }
 }

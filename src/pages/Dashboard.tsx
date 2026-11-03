@@ -11,6 +11,7 @@ import {
   YAxis,
 } from 'recharts'
 import { CoachList } from '../components/CoachList'
+import { GoalCard } from '../components/GoalCard'
 import { PageHeader } from '../components/PageHeader'
 import { SITE_LABELS } from '../components/accounts'
 import { SERIES } from '../components/chartColors'
@@ -32,6 +33,9 @@ import { rebuildPuzzles } from '../puzzles/repo'
 import { puzzleStats } from '../puzzles/session'
 import { ratingChange, scoreOf } from '../stats/games'
 import { isDue } from '../training/cards'
+import { DEFAULT_DAILY_GOAL, dailyTotals } from '../training/activity'
+import { DAILY_GOAL_KEY } from '../training/activityRepo'
+import { getSetting } from '../db/settings'
 
 const tile = 'rounded-lg border border-stone-800 bg-stone-950/40 p-4'
 const pawns = (v?: number) =>
@@ -146,6 +150,8 @@ export function Dashboard() {
     cards: await db.cards.toArray(),
     puzzles: await db.puzzles.toArray(),
     puzzleProgress: await db.puzzleProgress.toArray(),
+    activity: await db.activity.toArray(),
+    goal: await getSetting(db, DAILY_GOAL_KEY, DEFAULT_DAILY_GOAL),
   }))
   const [chosen, setChosen] = useState<string>()
   const [now] = useState(() => Date.now())
@@ -276,6 +282,10 @@ export function Dashboard() {
           to="/partite"
           accent="text-emerald-400"
         />
+      </div>
+
+      <div className="mt-4">
+        <GoalCard totals={dailyTotals(data.activity)} goal={data.goal} now={now} />
       </div>
 
       <section className="mt-6">

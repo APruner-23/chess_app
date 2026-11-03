@@ -5,6 +5,7 @@ import { PageHeader } from '../components/PageHeader'
 import { db } from '../db/schema'
 import { ENDGAMES, GOAL_LABELS, type Endgame } from '../endgames/catalog'
 import { recordEndgame } from '../endgames/repo'
+import { recordActivity } from '../training/activityRepo'
 import { endgamesToday, endgameStatus } from '../endgames/session'
 
 const DAY = 86_400_000
@@ -53,7 +54,10 @@ export function Finali() {
         <EndgameTrainer
           key={`${current.id}|${session.index}`}
           endgame={current}
-          onFirstResult={(ok) => void recordEndgame(db, current.id, ok)}
+          onFirstResult={(ok) => {
+            void recordEndgame(db, current.id, ok)
+            void recordActivity(db, 'endgames')
+          }}
           onNext={() => setSession({ ...session, index: session.index + 1 })}
           nextLabel={last ? 'Fine' : 'Avanti'}
         />

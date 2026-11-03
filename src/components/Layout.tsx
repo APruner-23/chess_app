@@ -3,7 +3,9 @@ import { NavLink, Outlet } from 'react-router'
 import { navItems } from './navItems'
 import { UpdateBanner } from './UpdateBanner'
 import { startAutoSync } from './syncStore'
-import { AUTO_ANALYZE_SETTING } from '../sync/sync'
+import { AUTO_ANALYZE_SETTING, SOUNDS_SETTING } from '../sync/sync'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { setSoundsEnabled } from './sound'
 import { db } from '../db/schema'
 import { getSetting } from '../db/settings'
 
@@ -15,6 +17,8 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 /** App shell: sidebar on desktop, bottom bar on phones, page content in the middle. */
 export function Layout() {
   useEffect(() => startAutoSync(), [])
+  const sounds = useLiveQuery(() => getSetting(db, SOUNDS_SETTING, true))
+  useEffect(() => setSoundsEnabled(sounds ?? true), [sounds])
   // Background analysis, if this device opted in: a few seconds after start, so the
   // first screen and the sync come first.
   useEffect(() => {

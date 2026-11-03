@@ -10,6 +10,7 @@ import { judgeEndgame, HOLD_MOVES, type Verdict } from '../endgames/judge'
 import type { Eval } from '../import/types'
 import { gameEnd, type BotLevel } from '../sparring/bot'
 import { Board } from './Board'
+import { playSound } from './sound'
 import { BOARD_COLUMN } from './format'
 import { useBotMove } from './useBotMove'
 
@@ -58,6 +59,9 @@ export function EndgameTrainer({
     userMoves,
   })
   const outcome = verdict?.ok
+  useEffect(() => {
+    if (outcome !== undefined) playSound(outcome ? 'success' : 'fail')
+  }, [outcome])
   useEffect(() => {
     if (outcome === undefined || recorded.current) return
     recorded.current = true
