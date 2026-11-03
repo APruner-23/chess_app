@@ -13,6 +13,7 @@ export const BACKUP_TABLES = [
   'repMoves',
   'cards',
   'reviewLogs',
+  'puzzleProgress',
   'feedback',
   'settings',
 ] as const

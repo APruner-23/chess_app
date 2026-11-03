@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Board, type Glyph } from '../components/Board'
 import { EvalBar } from '../components/EvalBar'
@@ -161,7 +161,12 @@ function Review({ game, analysis }: { game: Game; analysis?: Analysis }) {
   const progress = useAnalysisStore((s) => s.progress[game.id])
   const analyze = useAnalysisStore((s) => s.analyze)
   const last = game.moves.length
-  const [ply, setPly] = useState(last)
+  // `?ply=N` opens the game at that position (e.g. from a puzzle).
+  const [params] = useSearchParams()
+  const [ply, setPly] = useState(() => {
+    const at = Number(params.get('ply') ?? NaN)
+    return Number.isInteger(at) && at >= 0 && at <= last ? at : last
+  })
   /** Moves tried from the current game position (empty = following the game). */
   const [variation, setVariation] = useState<string[]>([])
   /** Live engine results by FEN, so moves tried in a variation can be labeled. */

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { PageHeader } from '../components/PageHeader'
 import { Trainer } from '../components/Trainer'
@@ -12,6 +13,9 @@ import { RepGraph, turnOf } from '../repertoire/graph'
 import { loadMoves } from '../repertoire/repo'
 import type { RepMove } from '../repertoire/types'
 import { hardCards, trainingStats } from '../training/cards'
+import { rebuildPuzzles } from '../puzzles/repo'
+import { puzzleStats } from '../puzzles/session'
+import type { Puzzle, PuzzleProgress } from '../puzzles/types'
 import {
   drillSession,
   prepareSession,
@@ -31,12 +35,15 @@ export function Allenamento() {
   const [drillRep, setDrillRep] = useState('')
   useEffect(() => {
     void syncAllCards(db)
+    void rebuildPuzzles(db)
   }, [])
   const data = useLiveQuery(async () => ({
     cards: await db.cards.toArray(),
     logs: await db.reviewLogs.toArray(),
     reps: await db.repertoires.toArray(),
     newPerDay: await getSetting(db, NEW_PER_DAY_KEY, DEFAULT_NEW_PER_DAY),
+    puzzles: await db.puzzles.toArray(),
+    puzzleProgress: await db.puzzleProgress.toArray(),
   }))
   const [now] = useState(() => Date.now())
 
@@ -250,6 +257,97 @@ export function Allenamento() {
           </div>
         </>
       )}
+      <PuzzleTile puzzles={data.puzzles} progress={data.puzzleProgress} now={now} />
     </>
+  )
+}
+
+const PHASE_OPTIONS: [string, string][] = [
+  ['', 'Tutte le fasi'],
+  ['opening', 'Apertura'],
+  ['middlegame', 'Mediogioco'],
+  ['endgame', 'Finale'],
+]
+
+/** Puzzles from the user's own mistakes: scheduled session, or free practice by phase. */
+function PuzzleTile({
+  puzzles,
+  progress,
+  now,
+}: {
+  puzzles: Puzzle[]
+  progress: PuzzleProgress[]
+  now: number
+}) {
+  const navigate = useNavigate()
+  const [phase, setPhase] = useState('')
+  const [blunders, setBlunders] = useState(false)
+  const stats = puzzleStats(puzzles, new Map(progress.map((p) => [p.id, p])), now)
+  const todo = stats.due + stats.newToday
+  const practice = new URLSearchParams({ mode: 'practice' })
+  if (phase) practice.set('phase', phase)
+  if (blunders) practice.set('judgment', 'blunder')
+  return (
+    <section className="mt-6 rounded-lg border border-stone-800 bg-stone-950/40 p-4">
+      <h2 className="text-lg font-semibold">Puzzle dai tuoi errori</h2>
+      {stats.total === 0 ? (
+        <p className="mt-1 text-sm text-stone-400">
+          Ancora nessun puzzle: nascono dagli errori nelle partite analizzate. Analizza qualche
+          partita in Partite e torna qui.
+        </p>
+      ) : (
+        <div className="mt-2 grid gap-4 sm:grid-cols-2">
+          <div>
+            <div className="text-3xl font-semibold">{todo}</div>
+            <div className="text-xs text-stone-500">
+              da fare oggi: {stats.due} da ripassare, {stats.newToday} nuovi · {stats.total} in
+              tutto
+              {stats.solvedShare !== undefined &&
+                ` · ${Math.round(stats.solvedShare * 100)}% risolti all'ultimo tentativo`}
+            </div>
+            <button
+              type="button"
+              disabled={!todo}
+              onClick={() => navigate('/puzzle?mode=review')}
+              className="mt-3 w-full rounded-md bg-violet-700 px-4 py-2 font-medium hover:bg-violet-600 disabled:opacity-40"
+            >
+              Risolvi
+            </button>
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="text-sm text-stone-400">
+              Pratica libera (non cambia i ripassi), 20 a caso:
+            </div>
+            <select
+              aria-label="Fase dei puzzle"
+              value={phase}
+              onChange={(e) => setPhase(e.target.value)}
+              className="rounded-md bg-stone-800 px-3 py-2"
+            >
+              {PHASE_OPTIONS.map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={blunders}
+                onChange={(e) => setBlunders(e.target.checked)}
+              />
+              Solo errori gravi
+            </label>
+            <button
+              type="button"
+              onClick={() => navigate(`/puzzle?${practice}`)}
+              className="rounded-md bg-stone-700 px-4 py-2 font-medium hover:bg-stone-600"
+            >
+              Esercitati
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   )
 }

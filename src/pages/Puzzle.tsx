@@ -1,0 +1,55 @@
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router'
+import { PageHeader } from '../components/PageHeader'
+import { PuzzleTrainer } from '../components/PuzzleTrainer'
+import type { Phase } from '../chess/phase'
+import { db } from '../db/schema'
+import { recordPuzzle } from '../puzzles/repo'
+import { practicePuzzles, scheduledPuzzles } from '../puzzles/session'
+import type { Puzzle as PuzzleT } from '../puzzles/types'
+
+/**
+ * A puzzle session: `?mode=review` (scheduled, answers recorded) or free practice,
+ * optionally filtered with `phase` and `judgment`.
+ */
+export function Puzzle() {
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const review = params.get('mode') !== 'practice'
+  const [puzzles, setPuzzles] = useState<PuzzleT[]>()
+
+  useEffect(() => {
+    let live = true
+    void (async () => {
+      const all = await db.puzzles.toArray()
+      const progress = new Map((await db.puzzleProgress.toArray()).map((p) => [p.id, p]))
+      const list = review
+        ? scheduledPuzzles(all, progress, Date.now())
+        : practicePuzzles(all, {
+            ...(params.get('phase') ? { phase: params.get('phase') as Phase } : {}),
+            ...(params.get('judgment')
+              ? { judgment: params.get('judgment') as PuzzleT['judgment'] }
+              : {}),
+          })
+      if (live) setPuzzles(list)
+    })()
+    return () => {
+      live = false
+    }
+  }, [params, review])
+
+  return (
+    <>
+      <PageHeader title={review ? 'Puzzle dai tuoi errori' : 'Puzzle · pratica libera'} />
+      {puzzles && (
+        <PuzzleTrainer
+          puzzles={puzzles}
+          onAnswer={
+            review ? (id, correct, ms) => void recordPuzzle(db, id, correct, ms) : undefined
+          }
+          onExit={() => navigate('/allenamento')}
+        />
+      )}
+    </>
+  )
+}

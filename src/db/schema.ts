@@ -1,3 +1,4 @@
+import type { Puzzle, PuzzleProgress } from '../puzzles/types'
 import Dexie, { type Table } from 'dexie'
 import type { Analysis, Color, Game, GameResult, Site, Speed } from '../import/types'
 import type { RepMove, Repertoire } from '../repertoire/types'
@@ -70,6 +71,8 @@ export class ChessDb extends Dexie {
   analyses!: Table<Analysis, string>
   gamePositions!: Table<GamePosition, string>
   settings!: Table<Setting, string>
+  puzzles!: Table<Puzzle, string>
+  puzzleProgress!: Table<PuzzleProgress, string>
 
   constructor(name = 'chess_app') {
     super(name)
@@ -95,6 +98,10 @@ export class ChessDb extends Dexie {
     })
     this.version(5).stores({
       tombstones: 'key',
+    })
+    this.version(6).stores({
+      puzzles: 'id, gameId',
+      puzzleProgress: 'id',
     })
   }
 }

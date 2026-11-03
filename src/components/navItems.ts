@@ -31,6 +31,7 @@ export const Feedback = page(() => import('../pages/Feedback'), 'Feedback')
 export const Impostazioni = page(() => import('../pages/Impostazioni'), 'Impostazioni')
 export const Partita = page(() => import('../pages/Partita'), 'Partita')
 export const Editor = page(() => import('../pages/Editor'), 'Editor')
+export const Puzzle = page(() => import('../pages/Puzzle'), 'Puzzle')
 export const OAuth = page(() => import('../pages/OAuth'), 'OAuth')
 
 export interface NavItem {
