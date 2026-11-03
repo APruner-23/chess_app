@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
@@ -12,7 +12,8 @@ import {
 } from 'recharts'
 import { PageHeader } from '../components/PageHeader'
 import { SITE_LABELS } from '../components/accounts'
-import { SPEED_LABELS, formatDate } from '../components/format'
+import { SERIES } from '../components/chartColors'
+import { RESULT_LABELS, SPEED_LABELS, formatDate } from '../components/format'
 import { db } from '../db/schema'
 import {
   experimentalVsMain,
@@ -24,40 +25,63 @@ import {
 import { processFeedback } from '../feedback/repo'
 import { groupKey } from '../feedback/compareGame'
 import { figurine } from '../chess/figurine'
-import type { Site, Speed } from '../import/types'
-import { openingKey, openingStats } from '../openings/stats'
+import type { GameResult, Site, Speed } from '../import/types'
+import { rebuildPuzzles } from '../puzzles/repo'
+import { puzzleStats } from '../puzzles/session'
+import { ratingChange, scoreOf } from '../stats/games'
 import { isDue } from '../training/cards'
 
 const tile = 'rounded-lg border border-stone-800 bg-stone-950/40 p-4'
 const pawns = (v?: number) =>
   v === undefined ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(2)}`
+/** Recent games whose analysis is offered on the home page. */
+const RECENT = 100
 
-function Stat({
+/** A thing to do today: a count, what it means, and where to go. */
+function Todo({
+  icon,
   label,
   value,
   sub,
+  action,
   to,
+  accent,
 }: {
+  icon: string
   label: string
-  value: string | number
-  sub?: string
-  to?: string
+  value: number
+  sub: string
+  action: string
+  to: string
+  accent: string
 }) {
-  const body = (
-    <>
-      <div className="text-sm text-stone-400">{label}</div>
-      <div className="text-3xl font-semibold">{value}</div>
-      {sub && <div className="text-xs text-stone-500">{sub}</div>}
-    </>
-  )
-  return to ? (
-    <Link to={to} className={`${tile} block hover:border-stone-600`}>
-      {body}
+  const done = value === 0
+  return (
+    <Link
+      to={to}
+      className={`${tile} group flex flex-col transition-colors hover:border-stone-600 hover:bg-stone-900/60`}
+    >
+      <div className="flex items-center gap-2 text-sm text-stone-400">
+        <span className={`text-lg leading-none ${done ? 'text-stone-600' : accent}`}>{icon}</span>
+        {label}
+      </div>
+      <div className={`mt-1 text-3xl font-semibold ${done ? 'text-stone-500' : ''}`}>{value}</div>
+      <div className="text-xs text-stone-500">{sub}</div>
+      <div
+        className={`mt-auto pt-3 text-sm font-medium ${done ? 'text-stone-500' : accent} group-hover:underline`}
+      >
+        {done ? 'Tutto fatto ✓' : `${action} →`}
+      </div>
     </Link>
-  ) : (
-    <div className={tile}>{body}</div>
   )
 }
+
+const RESULT_DOT: Record<GameResult, string> = {
+  win: 'bg-emerald-600 text-white',
+  draw: 'bg-stone-500 text-white',
+  loss: 'bg-red-600 text-white',
+}
+const RESULT_LETTER: Record<GameResult, string> = { win: 'V', draw: 'P', loss: 'S' }
 
 function AggregateTile({ title, a }: { title: string; a: Aggregate }) {
   return (
@@ -81,9 +105,35 @@ function AggregateTile({ title, a }: { title: string; a: Aggregate }) {
   )
 }
 
+function greeting(now: number): string {
+  const h = new Date(now).getHours()
+  return h < 5 ? 'Buonanotte' : h < 13 ? 'Buongiorno' : h < 18 ? 'Buon pomeriggio' : 'Buonasera'
+}
+
+function Card({
+  title,
+  children,
+  right,
+}: {
+  title: string
+  children: ReactNode
+  right?: ReactNode
+}) {
+  return (
+    <section className={tile}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-medium">{title}</h2>
+        {right}
+      </div>
+      {children}
+    </section>
+  )
+}
+
 export function Dashboard() {
   useEffect(() => {
     void processFeedback(db)
+    void rebuildPuzzles(db)
   }, [])
   const data = useLiveQuery(async () => ({
     games: await db.games.toArray(),
@@ -92,6 +142,8 @@ export function Dashboard() {
     openItems: await db.feedback.where('status').equals('open').toArray(),
     reps: new Map((await db.repertoires.toArray()).map((r) => [r.id, r])),
     cards: await db.cards.toArray(),
+    puzzles: await db.puzzles.toArray(),
+    puzzleProgress: await db.puzzleProgress.toArray(),
   }))
   const [chosen, setChosen] = useState<string>()
   const [now] = useState(() => Date.now())
@@ -99,43 +151,35 @@ export function Dashboard() {
   const derived = useMemo(() => {
     if (!data) return undefined
     const games = new Map(data.games.map((g) => [g.id, g]))
+    const analyzed = new Set(data.analyses.map((a) => a.id))
     const accuracy = new Map<string, number>()
     for (const a of data.analyses) {
       const g = games.get(a.id)
       const acc = g && userAccuracy(g, a)
       if (acc !== undefined) accuracy.set(a.id, acc)
     }
-    const recent = data.games
-      .filter((g) => accuracy.has(g.id))
-      .sort((a, b) => b.playedAt - a.playedAt)
-      .slice(0, 30)
-    // Per site and speed: game count (for sorting) and the user's latest rating.
-    const combos = new Map<string, { n: number; t: number; rating?: number }>()
+    const byDate = [...data.games].sort((a, b) => b.playedAt - a.playedAt)
+    // Per site and speed: game count (for sorting), latest rating and its 30-day change.
+    const combos = new Map<string, { n: number; rating?: number; change?: number }>()
     for (const g of data.games) {
       const key = `${g.site}|${g.speed}`
-      const c = combos.get(key) ?? { n: 0, t: -Infinity }
-      c.n++
-      const rating = g[g.userColor].rating
-      if (rating !== undefined && g.playedAt > c.t) Object.assign(c, { t: g.playedAt, rating })
-      combos.set(key, c)
+      combos.set(key, { n: (combos.get(key)?.n ?? 0) + 1 })
     }
-    const openings = openingStats(data.games, 'family')
-      .slice(0, 8)
-      .map((s) => {
-        const accs = data.games
-          .filter((g) => openingKey(g, 'family') === s.name && accuracy.has(g.id))
-          .map((g) => accuracy.get(g.id)!)
-        return {
-          ...s,
-          accuracy: accs.length ? accs.reduce((a, b) => a + b, 0) / accs.length : undefined,
-        }
-      })
+    for (const [key, c] of combos) {
+      const [site, speed] = key.split('|') as [Site, Speed]
+      const series = ratingSeries(data.games, site, speed)
+      c.rating = series.at(-1)?.rating
+      c.change = ratingChange(series, now)
+    }
+    const form = byDate.slice(0, 20)
     return {
-      avgAccuracy: recent.length
-        ? recent.reduce((a, g) => a + accuracy.get(g.id)!, 0) / recent.length
-        : undefined,
+      accuracy,
       combos: [...combos.entries()].sort((a, b) => b[1].n - a[1].n),
-      openings,
+      recent: byDate.slice(0, 5),
+      form,
+      formScore: scoreOf(form.map((g) => g.result)),
+      toAnalyze: byDate.slice(0, RECENT).filter((g) => !analyzed.has(g.id)).length,
+      puzzles: puzzleStats(data.puzzles, new Map(data.puzzleProgress.map((p) => [p.id, p])), now),
       study: (() => {
         const map = new Map<string, typeof data.openItems>()
         for (const f of data.openItems) map.set(groupKey(f), [...(map.get(groupKey(f)) ?? []), f])
@@ -144,20 +188,33 @@ export function Dashboard() {
       lines: lineStats(data.exits, games, data.reps).slice(0, 10),
       vs: experimentalVsMain(data.exits, data.reps),
     }
-  }, [data])
+  }, [data, now])
 
-  if (!data || !derived) return <PageHeader title="Dashboard" />
+  if (!data || !derived) return <PageHeader title="Home" />
   if (data.games.length === 0) {
     return (
       <>
-        <PageHeader title="Dashboard" />
-        <p className="text-stone-400">
-          Inizia da{' '}
-          <Link to="/partite" className="text-emerald-400 hover:underline">
-            Partite
-          </Link>
-          : importa le tue partite da Chess.com e Lichess.
-        </p>
+        <PageHeader title={greeting(now)}>Benvenuto nella tua app di scacchi.</PageHeader>
+        <div className={`${tile} max-w-xl space-y-2`}>
+          <p>Per cominciare:</p>
+          <ol className="list-decimal space-y-1 pl-5 text-stone-300">
+            <li>
+              importa le tue partite da Chess.com e Lichess in{' '}
+              <Link to="/partite" className="text-emerald-400 hover:underline">
+                Partite
+              </Link>
+              ;
+            </li>
+            <li>
+              crea un repertorio di aperture in{' '}
+              <Link to="/repertori" className="text-emerald-400 hover:underline">
+                Repertori
+              </Link>
+              ;
+            </li>
+            <li>allenati ogni giorno qualche minuto in Allenamento.</li>
+          </ol>
+        </div>
       </>
     )
   }
@@ -166,29 +223,212 @@ export function Dashboard() {
   const [site, speed] = combo.split('|') as [Site, Speed]
   const series = ratingSeries(data.games, site, speed)
   const due = data.cards.filter((c) => isDue(c, now)).length
+  const puzzleTodo = derived.puzzles.due + derived.puzzles.newToday
 
   return (
     <>
-      <PageHeader title="Dashboard" />
+      <PageHeader title={greeting(now)}>Ecco cosa c'è da fare oggi.</PageHeader>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Da ripassare" value={due} sub="posizioni in scadenza" to="/allenamento" />
-        <Stat
-          label="Feedback aperti"
+        <Todo
+          icon="♗"
+          label="Ripassi"
+          value={due}
+          sub="posizioni dei repertori in scadenza"
+          action="Ripassa"
+          to="/allenamento"
+          accent="text-sky-400"
+        />
+        <Todo
+          icon="✦"
+          label="Puzzle"
+          value={puzzleTodo}
+          sub="dai tuoi errori, da ripassare o nuovi"
+          action="Risolvi"
+          to={puzzleTodo ? '/puzzle?mode=review' : '/allenamento'}
+          accent="text-violet-400"
+        />
+        <Todo
+          icon="♖"
+          label="Feedback"
           value={data.openItems.length}
-          sub="dalle tue partite"
+          sub="deviazioni e buchi nei repertori"
+          action="Guarda"
           to="/feedback"
+          accent="text-amber-400"
         />
-        <Stat
-          label="Partite"
-          value={data.games.length.toLocaleString('it-IT')}
-          sub={`${data.analyses.length} analizzate`}
+        <Todo
+          icon={'♟\uFE0E'}
+          label="Da analizzare"
+          value={derived.toAnalyze}
+          sub={`tra le ultime ${Math.min(RECENT, data.games.length)} partite`}
+          action="Analizza"
           to="/partite"
+          accent="text-emerald-400"
         />
-        <Stat
-          label="Accuratezza"
-          value={derived.avgAccuracy !== undefined ? `${Math.round(derived.avgAccuracy)}%` : '—'}
-          sub="media delle ultime 30 partite analizzate"
-        />
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Card title="Rating">
+            <div
+              className="mb-3 flex flex-wrap gap-2"
+              role="radiogroup"
+              aria-label="Sito e cadenza"
+            >
+              {derived.combos.map(([key, c]) => {
+                const [s, sp] = key.split('|') as [Site, Speed]
+                const active = key === combo
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setChosen(key)}
+                    className={`shrink-0 rounded-md border px-3 py-1.5 text-left transition-colors ${
+                      active
+                        ? 'border-stone-500 bg-stone-800'
+                        : 'border-stone-800 hover:border-stone-600'
+                    }`}
+                  >
+                    <div className="text-xs text-stone-400">
+                      {SITE_LABELS[s]} · {SPEED_LABELS[sp]}
+                    </div>
+                    <div className="font-semibold">
+                      {c.rating ?? '—'}
+                      {c.change !== undefined && c.change !== 0 && (
+                        <span
+                          className={`ml-1.5 text-xs font-normal ${c.change > 0 ? 'text-emerald-400' : 'text-red-400'}`}
+                          title="Variazione negli ultimi 30 giorni"
+                        >
+                          {c.change > 0 ? '▲' : '▼'} {Math.abs(c.change)}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+            {series.length < 2 ? (
+              <p className="text-sm text-stone-500">Servono almeno due partite con rating.</p>
+            ) : (
+              <div className="h-56">
+                <ResponsiveContainer>
+                  <LineChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+                    <CartesianGrid stroke="#292524" vertical={false} />
+                    <XAxis
+                      dataKey="t"
+                      type="number"
+                      scale="time"
+                      domain={['dataMin', 'dataMax']}
+                      tickFormatter={(t: number) => {
+                        // Short ranges show day and month, long ones month and year.
+                        const short = series[series.length - 1]!.t - series[0]!.t < 120 * 86_400_000
+                        return new Date(t).toLocaleDateString(
+                          'it-IT',
+                          short
+                            ? { day: 'numeric', month: 'short' }
+                            : { month: 'short', year: '2-digit' },
+                        )
+                      }}
+                      stroke="#78716c"
+                      fontSize={12}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={['auto', 'auto']}
+                      stroke="#78716c"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <Tooltip
+                      isAnimationActive={false}
+                      content={({ active, payload }) => {
+                        const p = payload?.[0]?.payload as { t: number; rating: number } | undefined
+                        return active && p ? (
+                          <div className="rounded border border-stone-700 bg-stone-900 px-2 py-1 text-xs">
+                            {formatDate(p.t)} · {p.rating}
+                          </div>
+                        ) : null
+                      }}
+                    />
+                    <Line
+                      type="linear"
+                      dataKey="rating"
+                      stroke={SERIES.user}
+                      strokeWidth={2}
+                      dot={false}
+                      isAnimationActive={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        <Card
+          title="Forma recente"
+          right={
+            <span className="text-sm text-stone-400">
+              {derived.formScore.score !== undefined &&
+                `${Math.round(derived.formScore.score * 100)}% nelle ultime ${derived.form.length}`}
+            </span>
+          }
+        >
+          <div
+            className="flex flex-wrap gap-1"
+            aria-label="Risultati delle ultime partite, dalla più recente"
+          >
+            {derived.form.map((g) => (
+              <Link
+                key={g.id}
+                to={`/partite/${encodeURIComponent(g.id)}`}
+                title={`${RESULT_LABELS[g.result]} · ${formatDate(g.playedAt)}`}
+                className={`flex h-6 w-6 items-center justify-center rounded text-[11px] font-semibold ${RESULT_DOT[g.result]} hover:opacity-80`}
+              >
+                {RESULT_LETTER[g.result]}
+              </Link>
+            ))}
+          </div>
+          <ul className="mt-4 divide-y divide-stone-800 text-sm">
+            {derived.recent.map((g) => {
+              const opp = g.userColor === 'white' ? g.black : g.white
+              const acc = derived.accuracy.get(g.id)
+              return (
+                <li key={g.id}>
+                  <Link
+                    to={`/partite/${encodeURIComponent(g.id)}`}
+                    className="-mx-2 flex items-center gap-2 rounded px-2 py-1.5 hover:bg-stone-800/60"
+                  >
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${RESULT_DOT[g.result].split(' ')[0]}`}
+                      aria-label={RESULT_LABELS[g.result]}
+                    />
+                    <span className="min-w-0 flex-1 truncate">
+                      {g.userColor === 'white' ? '○' : '●'} {opp.name}
+                      {opp.rating ? <span className="text-stone-500"> {opp.rating}</span> : null}
+                      <span className="block truncate text-xs text-stone-500">
+                        {g.openingName ?? 'Apertura sconosciuta'}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-right text-xs text-stone-500">
+                      {formatDate(g.playedAt)}
+                      {acc !== undefined && <span className="block">{Math.round(acc)}%</span>}
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+          <Link
+            to="/partite"
+            className="mt-2 inline-block text-sm text-emerald-400 hover:underline"
+          >
+            Tutte le partite →
+          </Link>
+        </Card>
       </div>
 
       {derived.study.length > 0 && (
@@ -223,118 +463,7 @@ export function Dashboard() {
         </section>
       )}
 
-      <section className={`${tile} mt-4`}>
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-medium">Andamento del rating</h2>
-          <select
-            aria-label="Sito e cadenza"
-            value={combo}
-            onChange={(e) => setChosen(e.target.value)}
-            className="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-sm"
-          >
-            {derived.combos.map(([key, c]) => {
-              const [s, sp] = key.split('|') as [Site, Speed]
-              return (
-                <option key={key} value={key}>
-                  {SITE_LABELS[s]} · {SPEED_LABELS[sp]}
-                  {c.rating !== undefined ? ` · ${c.rating}` : ''}
-                </option>
-              )
-            })}
-          </select>
-        </div>
-        {series.length < 2 ? (
-          <p className="text-sm text-stone-500">Servono almeno due partite con rating.</p>
-        ) : (
-          <div className="h-56">
-            <ResponsiveContainer>
-              <LineChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
-                <CartesianGrid stroke="#292524" vertical={false} />
-                <XAxis
-                  dataKey="t"
-                  type="number"
-                  scale="time"
-                  domain={['dataMin', 'dataMax']}
-                  tickFormatter={(t: number) => {
-                    // Short ranges show day and month, long ones month and year.
-                    const short = series[series.length - 1]!.t - series[0]!.t < 120 * 86_400_000
-                    return new Date(t).toLocaleDateString(
-                      'it-IT',
-                      short
-                        ? { day: 'numeric', month: 'short' }
-                        : { month: 'short', year: '2-digit' },
-                    )
-                  }}
-                  stroke="#78716c"
-                  fontSize={12}
-                  tickLine={false}
-                />
-                <YAxis
-                  domain={['auto', 'auto']}
-                  stroke="#78716c"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip
-                  isAnimationActive={false}
-                  content={({ active, payload }) => {
-                    const p = payload?.[0]?.payload as { t: number; rating: number } | undefined
-                    return active && p ? (
-                      <div className="rounded border border-stone-700 bg-stone-900 px-2 py-1 text-xs">
-                        {formatDate(p.t)} · {p.rating}
-                      </div>
-                    ) : null
-                  }}
-                />
-                <Line
-                  type="linear"
-                  dataKey="rating"
-                  stroke="#34d399"
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </section>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <section className={tile}>
-          <h2 className="mb-2 font-medium">Le tue aperture più giocate</h2>
-          <table className="w-full text-sm">
-            <thead className="text-left text-stone-500">
-              <tr>
-                <th className="py-1">Apertura</th>
-                <th className="text-right">Partite</th>
-                <th className="text-right">Punteggio</th>
-                <th className="text-right">Accuratezza</th>
-              </tr>
-            </thead>
-            <tbody>
-              {derived.openings.map((o) => (
-                <tr key={o.name} className="border-t border-stone-800">
-                  <td className="py-1">
-                    <Link
-                      to={`/partite?opening=${encodeURIComponent(o.name)}`}
-                      className="hover:underline"
-                    >
-                      {o.name}
-                    </Link>
-                  </td>
-                  <td className="text-right">{o.games}</td>
-                  <td className="text-right">{o.score}%</td>
-                  <td className="text-right">
-                    {o.accuracy !== undefined ? `${Math.round(o.accuracy)}%` : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-
+      <div className="mt-4 grid gap-4">
         <section className={tile}>
           <h2 className="mb-2 font-medium">Le linee dei tuoi repertori</h2>
           {derived.lines.length === 0 ? (
@@ -387,6 +516,12 @@ export function Dashboard() {
           <AggregateTile title="Repertori principali" a={derived.vs.main} />
         </div>
       )}
+
+      <p className="mt-4 text-sm">
+        <Link to="/statistiche" className="text-emerald-400 hover:underline">
+          Altre statistiche: tempo, errori per fase, aperture →
+        </Link>
+      </p>
     </>
   )
 }

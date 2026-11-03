@@ -85,7 +85,14 @@ export function Repertori() {
                 className="block rounded-lg border border-stone-800 bg-stone-950/40 p-4 hover:border-stone-600"
               >
                 <div className="flex items-center gap-2 font-medium">
-                  <span>{r.color === 'white' ? '○' : '●'}</span>
+                  <span
+                    aria-hidden
+                    className={`inline-block h-3.5 w-3.5 rounded-full border ${
+                      r.color === 'white'
+                        ? 'border-stone-300 bg-stone-100'
+                        : 'border-stone-400 bg-stone-950'
+                    }`}
+                  />
                   {r.name}
                   {r.experimental && (
                     <span className="rounded bg-amber-900/60 px-1.5 text-xs text-amber-200">

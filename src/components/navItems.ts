@@ -47,8 +47,8 @@ export interface NavItem {
 
 /** Main sections of the app, in navigation order. */
 export const navItems: NavItem[] = [
-  { path: '/', label: 'Dashboard', short: 'Home', icon: '♔', Page: Dashboard },
-  { path: '/partite', label: 'Partite', short: 'Partite', icon: '♟', Page: Partite },
+  { path: '/', label: 'Home', short: 'Home', icon: '♔', Page: Dashboard },
+  { path: '/partite', label: 'Partite', short: 'Partite', icon: '♟\uFE0E', Page: Partite },
   { path: '/repertori', label: 'Repertori', short: 'Repertori', icon: '♘', Page: Repertori },
   { path: '/allenamento', label: 'Allenamento', short: 'Allena', icon: '♗', Page: Allenamento },
   { path: '/statistiche', label: 'Statistiche', short: 'Stats', icon: '♕', Page: Statistiche },

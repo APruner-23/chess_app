@@ -5,6 +5,7 @@ import type { Analysis, Game } from '../../src/import/types'
 import {
   endings,
   filterGames,
+  ratingChange,
   scoreAfterResult,
   scoreByDayPart,
   scoreByRatingGap,
@@ -58,6 +59,21 @@ describe('game stats', () => {
     expect(tilt.first.games + tilt.win.games + tilt.draw.games + tilt.loss.games).toBe(
       chesscom.length,
     )
+  })
+})
+
+describe('rating change', () => {
+  it('compares the latest rating with the one before the window', () => {
+    const day = 86_400_000
+    const s = [
+      { t: 0, rating: 1000 },
+      { t: 10 * day, rating: 1050 },
+      { t: 50 * day, rating: 1100 },
+      { t: 55 * day, rating: 1080 },
+    ]
+    expect(ratingChange(s, 60 * day)).toBe(30)
+    expect(ratingChange(s, 20 * day)).toBe(80) // nothing before the window: from the first point
+    expect(ratingChange(s.slice(0, 1), 60 * day)).toBeUndefined()
   })
 })
 

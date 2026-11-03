@@ -13,7 +13,9 @@ function renderAt(path: string) {
 describe('app shell', () => {
   it.each(navItems)('renders the $label page at $path', async ({ path, label }) => {
     renderAt(path)
-    expect(await screen.findByRole('heading', { level: 1, name: label })).toBeTruthy()
+    // The home page greets the user instead of repeating its name.
+    const name = path === '/' ? /^(Home|Buon)/ : label
+    expect(await screen.findByRole('heading', { level: 1, name })).toBeTruthy()
   })
 
   it('shows a not-found page for unknown paths', () => {

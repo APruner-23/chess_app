@@ -15,7 +15,14 @@ export function Layout() {
   return (
     <div className="flex min-h-dvh">
       <nav className="hidden w-52 shrink-0 flex-col gap-1 border-r border-stone-800 p-3 md:flex">
-        <div className="mb-4 px-3 text-lg font-semibold">chess_app</div>
+        <div className="mb-4 flex items-center gap-2 px-3 text-lg font-semibold">
+          <img
+            src={`${import.meta.env.BASE_URL}icons/icon.svg`}
+            alt=""
+            className="h-7 w-7 rounded-md"
+          />
+          chess_app
+        </div>
         {navItems.map(({ path, label, icon }) => (
           <NavLink key={path} to={path} end={path === '/'} className={linkClass}>
             <span className="w-5 text-center text-lg">{icon}</span>

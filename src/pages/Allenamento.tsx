@@ -135,8 +135,14 @@ export function Allenamento() {
   return (
     <>
       <PageHeader title="Allenamento">
-        Impara poche posizioni nuove al giorno, poi ripassa solo quelle che stai per dimenticare.
+        Aperture con la ripetizione spaziata, puzzle dai tuoi errori e partite contro il motore.
       </PageHeader>
+      <SectionTitle
+        first
+        icon="♗"
+        title="Aperture"
+        sub="Impara poche posizioni nuove al giorno, poi ripassa solo quelle che stai per dimenticare."
+      />
       {data.cards.length === 0 ? (
         <p className="text-stone-400">
           Nessuna posizione da allenare: crea un repertorio e aggiungi le tue mosse in Repertori.
@@ -258,10 +264,16 @@ export function Allenamento() {
           </div>
         </>
       )}
+      <SectionTitle
+        icon="✦"
+        title="Puzzle"
+        sub="Le posizioni delle tue partite in cui hai sbagliato: trova la mossa giusta."
+      />
       <PuzzleTile puzzles={data.puzzles} progress={data.puzzleProgress} now={now} />
-      <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-800 bg-stone-950/40 p-4">
+      <SectionTitle icon="♔" title="Sparring" />
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-800 bg-stone-950/40 p-4">
         <div>
-          <h2 className="text-lg font-semibold">Sparring contro il motore</h2>
+          <h3 className="font-medium">Gioca contro il motore</h3>
           <p className="text-sm text-stone-400">
             Gioca contro Stockfish al livello che vuoi, anche dalla fine di una linea del tuo
             repertorio, poi rivedi la partita con l'analisi.
@@ -276,6 +288,28 @@ export function Allenamento() {
         </button>
       </section>
     </>
+  )
+}
+
+function SectionTitle({
+  icon,
+  title,
+  sub,
+  first,
+}: {
+  icon: string
+  title: string
+  sub?: string
+  first?: boolean
+}) {
+  return (
+    <div className={`${first ? '' : 'mt-8'} mb-3`}>
+      <h2 className="flex items-center gap-2 text-lg font-semibold">
+        <span className="text-stone-400">{icon}</span>
+        {title}
+      </h2>
+      {sub && <p className="text-sm text-stone-400">{sub}</p>}
+    </div>
   )
 }
 
@@ -305,8 +339,8 @@ function PuzzleTile({
   if (phase) practice.set('phase', phase)
   if (blunders) practice.set('judgment', 'blunder')
   return (
-    <section className="mt-6 rounded-lg border border-stone-800 bg-stone-950/40 p-4">
-      <h2 className="text-lg font-semibold">Puzzle dai tuoi errori</h2>
+    <section className="rounded-lg border border-stone-800 bg-stone-950/40 p-4">
+      <h3 className="font-medium">Puzzle dai tuoi errori</h3>
       {stats.total === 0 ? (
         <p className="mt-1 text-sm text-stone-400">
           Ancora nessun puzzle: nascono dagli errori nelle partite analizzate. Analizza qualche
@@ -326,7 +360,7 @@ function PuzzleTile({
               type="button"
               disabled={!todo}
               onClick={() => navigate('/puzzle?mode=review')}
-              className="mt-3 w-full rounded-md bg-violet-700 px-4 py-2 font-medium hover:bg-violet-600 disabled:opacity-40"
+              className="mt-3 w-full rounded-md bg-violet-800 px-4 py-2 font-medium hover:bg-violet-700 disabled:opacity-40"
             >
               Risolvi
             </button>

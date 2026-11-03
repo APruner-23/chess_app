@@ -119,3 +119,18 @@ export function scoreAfterResult(games: readonly Game[]): Record<'first' | GameR
     loss: scoreOf(by.loss),
   }
 }
+
+/**
+ * Rating change over the last `days`: latest rating minus the last one before the
+ * window (or the first in it). Undefined with fewer than two points.
+ */
+export function ratingChange(
+  series: readonly { t: number; rating: number }[],
+  now: number,
+  days = 30,
+): number | undefined {
+  if (series.length < 2) return undefined
+  const since = now - days * 24 * 60 * 60 * 1000
+  const before = series.filter((p) => p.t < since).at(-1) ?? series[0]!
+  return series[series.length - 1]!.rating - before.rating
+}
