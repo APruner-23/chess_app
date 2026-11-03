@@ -27,6 +27,7 @@ export const Dashboard = page(() => import('../pages/Dashboard'), 'Dashboard')
 export const Partite = page(() => import('../pages/Partite'), 'Partite')
 export const Repertori = page(() => import('../pages/Repertori'), 'Repertori')
 export const Allenamento = page(() => import('../pages/Allenamento'), 'Allenamento')
+export const Statistiche = page(() => import('../pages/Statistiche'), 'Statistiche')
 export const Feedback = page(() => import('../pages/Feedback'), 'Feedback')
 export const Impostazioni = page(() => import('../pages/Impostazioni'), 'Impostazioni')
 export const Partita = page(() => import('../pages/Partita'), 'Partita')
@@ -50,6 +51,7 @@ export const navItems: NavItem[] = [
   { path: '/partite', label: 'Partite', short: 'Partite', icon: '♟', Page: Partite },
   { path: '/repertori', label: 'Repertori', short: 'Repertori', icon: '♘', Page: Repertori },
   { path: '/allenamento', label: 'Allenamento', short: 'Allena', icon: '♗', Page: Allenamento },
+  { path: '/statistiche', label: 'Statistiche', short: 'Stats', icon: '♕', Page: Statistiche },
   { path: '/feedback', label: 'Feedback', short: 'Feedback', icon: '♖', Page: Feedback },
   // U+FE0E asks for the text glyph, not the colored emoji.
   {

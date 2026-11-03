@@ -30,7 +30,10 @@ export function Layout() {
         </Suspense>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 grid grid-cols-6 border-t border-stone-800 bg-stone-900 pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav
+        style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+        className="fixed inset-x-0 bottom-0 grid border-t border-stone-800 bg-stone-900 pb-[env(safe-area-inset-bottom)] md:hidden"
+      >
         {navItems.map(({ path, label, short, icon }) => (
           <NavLink
             key={path}
