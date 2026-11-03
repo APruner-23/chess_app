@@ -17,19 +17,13 @@ import { SITE_LABELS } from '../components/accounts'
 import { SERIES } from '../components/chartColors'
 import { RESULT_LABELS, SPEED_LABELS, formatDate } from '../components/format'
 import { db } from '../db/schema'
-import {
-  experimentalVsMain,
-  lineStats,
-  ratingSeries,
-  userAccuracy,
-  type Aggregate,
-} from '../feedback/stats'
+import { experimentalVsMain, lineStats, ratingSeries, type Aggregate } from '../feedback/stats'
 import { processFeedback } from '../feedback/repo'
 import { groupKey } from '../feedback/compareGame'
 import { figurine } from '../chess/figurine'
 import { coachReport } from '../coach/insights'
 import type { GameResult, Site, Speed } from '../import/types'
-import { rebuildPuzzles } from '../puzzles/repo'
+import { refreshDerived } from '../puzzles/repo'
 import { puzzleStats } from '../puzzles/session'
 import { ratingChange, scoreOf } from '../stats/games'
 import { isDue } from '../training/cards'
@@ -111,6 +105,24 @@ function AggregateTile({ title, a }: { title: string; a: Aggregate }) {
   )
 }
 
+/**
+ * Six evenly spaced ticks and one date formatter for the rating chart. Letting Recharts
+ * format a label per point (hundreds of Intl calls) cost most of the home page's time.
+ */
+function timeAxis(series: readonly { t: number }[]) {
+  const first = series[0]?.t ?? 0
+  const last = series[series.length - 1]?.t ?? 0
+  // Short ranges show day and month, long ones month and year.
+  const short = last - first < 120 * 86_400_000
+  return {
+    ticks: Array.from({ length: 6 }, (_, i) => first + ((last - first) * i) / 5),
+    format: new Intl.DateTimeFormat(
+      'it-IT',
+      short ? { day: 'numeric', month: 'short' } : { month: 'short', year: '2-digit' },
+    ),
+  }
+}
+
 function greeting(now: number): string {
   const h = new Date(now).getHours()
   return h < 5 ? 'Buonanotte' : h < 13 ? 'Buongiorno' : h < 18 ? 'Buon pomeriggio' : 'Buonasera'
@@ -139,11 +151,13 @@ function Card({
 export function Dashboard() {
   useEffect(() => {
     void processFeedback(db)
-    void rebuildPuzzles(db)
+    void refreshDerived(db)
   }, [])
   const data = useLiveQuery(async () => ({
     games: await db.games.toArray(),
-    analyses: await db.analyses.toArray(),
+    // Keys and small per-game facts only: loading every analysis made the page slow.
+    analyzed: new Set(await db.analyses.toCollection().primaryKeys()),
+    facts: await db.gameFacts.toArray(),
     exits: await db.feedback.where('status').equals('info').toArray(),
     openItems: await db.feedback.where('status').equals('open').toArray(),
     reps: new Map((await db.repertoires.toArray()).map((r) => [r.id, r])),
@@ -159,13 +173,10 @@ export function Dashboard() {
   const derived = useMemo(() => {
     if (!data) return undefined
     const games = new Map(data.games.map((g) => [g.id, g]))
-    const analyzed = new Set(data.analyses.map((a) => a.id))
+    const analyzed = data.analyzed
+    const facts = new Map(data.facts.map((f) => [f.id, f]))
     const accuracy = new Map<string, number>()
-    for (const a of data.analyses) {
-      const g = games.get(a.id)
-      const acc = g && userAccuracy(g, a)
-      if (acc !== undefined) accuracy.set(a.id, acc)
-    }
+    for (const f of data.facts) if (f.accuracy !== undefined) accuracy.set(f.id, f.accuracy)
     const byDate = [...data.games].sort((a, b) => b.playedAt - a.playedAt)
     // Per site and speed: game count (for sorting), latest rating and its 30-day change.
     const combos = new Map<string, { n: number; rating?: number; change?: number }>()
@@ -196,7 +207,7 @@ export function Dashboard() {
       lines: lineStats(data.exits, games, data.reps).slice(0, 10),
       coach: coachReport({
         games: data.games,
-        analyses: new Map(data.analyses.map((a) => [a.id, a])),
+        facts,
         puzzles: data.puzzles,
         exits: data.exits,
         reps: data.reps,
@@ -239,6 +250,7 @@ export function Dashboard() {
   const combo = chosen ?? derived.combos[0]?.[0] ?? ''
   const [site, speed] = combo.split('|') as [Site, Speed]
   const series = ratingSeries(data.games, site, speed)
+  const axis = timeAxis(series)
   const due = data.cards.filter((c) => isDue(c, now)).length
   const puzzleTodo = derived.puzzles.due + derived.puzzles.newToday
 
@@ -352,16 +364,8 @@ export function Dashboard() {
                       type="number"
                       scale="time"
                       domain={['dataMin', 'dataMax']}
-                      tickFormatter={(t: number) => {
-                        // Short ranges show day and month, long ones month and year.
-                        const short = series[series.length - 1]!.t - series[0]!.t < 120 * 86_400_000
-                        return new Date(t).toLocaleDateString(
-                          'it-IT',
-                          short
-                            ? { day: 'numeric', month: 'short' }
-                            : { month: 'short', year: '2-digit' },
-                        )
-                      }}
+                      ticks={axis.ticks}
+                      tickFormatter={(t: number) => axis.format.format(t)}
                       stroke="#78716c"
                       fontSize={12}
                       tickLine={false}

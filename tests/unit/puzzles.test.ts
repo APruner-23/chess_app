@@ -79,3 +79,31 @@ describe('puzzle sessions', () => {
     expect(practicePuzzles(ps, {}, () => 0)).toHaveLength(4)
   })
 })
+
+describe('puzzle table rebuild', () => {
+  it('derives puzzles once, then only for new, changed or removed analyses', async () => {
+    const { ChessDb } = await import('../../src/db/schema')
+    const { refreshDerived } = await import('../../src/puzzles/repo')
+    const db = new ChessDb('puzzles-rebuild')
+    for (const { game, analysis } of games) {
+      await db.games.put(game)
+      await db.analyses.put({ ...analysis!, updatedAt: 1 })
+    }
+    const first = await refreshDerived(db)
+    expect(first).toBe(all.length)
+    expect(await db.puzzles.count()).toBe(all.length)
+    // Nothing changed: nothing is processed or written.
+    expect(await refreshDerived(db)).toBe(0)
+    // One analysis redone: only its puzzles are derived again.
+    const [a, b] = games
+    await db.analyses.update(a!.game.id, { updatedAt: 2 })
+    const redone = await refreshDerived(db)
+    expect(redone).toBe(all.filter((p) => p.gameId === a!.game.id).length)
+    expect(await db.puzzles.count()).toBe(all.length)
+    // An analysis removed: its puzzles go too.
+    await db.analyses.delete(b!.game.id)
+    await refreshDerived(db)
+    expect(await db.puzzles.where('gameId').equals(b!.game.id).count()).toBe(0)
+    db.close()
+  })
+})

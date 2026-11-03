@@ -1,9 +1,6 @@
-import { Chess } from 'chessops/chess'
-import { parseSan } from 'chessops/san'
-import { judgeMoves } from '../analysis/judgments'
-import { winFor } from '../analysis/winPercent'
-import { phaseOf, type Phase } from '../chess/phase'
-import type { Analysis, Game, GameResult } from '../import/types'
+import type { GameFacts } from '../analysis/facts'
+import type { Phase } from '../chess/phase'
+import type { Game, GameResult } from '../import/types'
 import { scoreOf, type Score } from './games'
 
 /** Base time and increment in seconds; undefined without a clock (daily games). */
@@ -84,7 +81,7 @@ const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.le
 
 export function timeStats(
   games: readonly Game[],
-  analyses: ReadonlyMap<string, Analysis>,
+  facts: ReadonlyMap<string, GameFacts>,
 ): TimeStats {
   const perMove = MOVE_BUCKETS.map(() => ({ user: [] as number[], opp: [] as number[] }))
   const left = CHECKPOINTS.map(() => ({ user: [] as number[], opp: [] as number[] }))
@@ -104,17 +101,9 @@ export function timeStats(
     const t = plyTimes(g)
     if (!t) continue
     n++
-    const a = analyses.get(g.id)
+    const a = facts.get(g.id)
     const errors = new Set<number>()
-    if (a) {
-      const judged =
-        a.source === 'lichess' ? (p: number) => a.plies[p]!.best !== undefined : undefined
-      for (const adv of judgeMoves(
-        a.plies.map((p) => p.eval),
-        judged,
-      ))
-        if (adv.judgment !== 'inaccuracy') errors.add(adv.ply)
-    }
+    if (a) for (const ply of a.errorPlies) errors.add(ply)
     let wentLow = false
     for (const p of t.plies) {
       const mine = isUser(g, p.ply)
@@ -126,7 +115,7 @@ export function timeStats(
       if (!mine) continue
       const trouble = p.before < ZEITNOT * t.base
       if (trouble) wentLow = true
-      if (!a || p.ply < SKIP_PLIES || p.ply >= a.plies.length) continue
+      if (!a || p.ply < SKIP_PLIES || p.ply >= a.plies) continue
       const err = errors.has(p.ply) ? 1 : 0
       const b = think[thinkBucket(p.spent, t.base)]!
       b.moves++
@@ -172,10 +161,12 @@ export interface PhaseErrors {
   avgLoss?: number
 }
 
+const PHASES = ['opening', 'middlegame', 'endgame'] as const
+
 /** The user's errors by game phase, from the analyzed games. */
 export function errorsByPhase(
   games: readonly Game[],
-  analyses: ReadonlyMap<string, Analysis>,
+  facts: ReadonlyMap<string, GameFacts>,
 ): PhaseErrors[] {
   const acc: Record<Phase, { moves: number; errors: number; blunders: number; loss: number }> = {
     opening: { moves: 0, errors: 0, blunders: 0, loss: 0 },
@@ -183,29 +174,18 @@ export function errorsByPhase(
     endgame: { moves: 0, errors: 0, blunders: 0, loss: 0 },
   }
   for (const g of games) {
-    const a = analyses.get(g.id)
-    if (!a) continue
-    const evals = a.plies.map((p) => p.eval)
-    const judged =
-      a.source === 'lichess' ? (p: number) => a.plies[p]!.best !== undefined : undefined
-    const advice = new Map(judgeMoves(evals, judged).map((x) => [x.ply, x.judgment]))
-    const pos = Chess.default()
-    for (let ply = 0; ply < Math.min(g.moves.length, evals.length); ply++) {
-      const move = parseSan(pos, g.moves[ply]!)
-      if (!move) break
-      if (isUser(g, ply)) {
-        const r = acc[phaseOf(pos.board, ply)]
-        r.moves++
-        const j = advice.get(ply)
-        if (j && j !== 'inaccuracy') r.errors++
-        if (j === 'blunder') r.blunders++
-        const before = ply === 0 ? 50 : winFor(evals[ply - 1]!, g.userColor)
-        r.loss += Math.max(0, before - winFor(evals[ply]!, g.userColor))
-      }
-      pos.play(move)
+    const tally = facts.get(g.id)?.phases
+    if (!tally) continue
+    for (const phase of PHASES) {
+      const r = acc[phase]
+      const t = tally[phase]
+      r.moves += t.moves
+      r.errors += t.errors
+      r.blunders += t.blunders
+      r.loss += t.loss
     }
   }
-  return (['opening', 'middlegame', 'endgame'] as const).map((phase) => {
+  return PHASES.map((phase) => {
     const r = acc[phase]
     return {
       phase,

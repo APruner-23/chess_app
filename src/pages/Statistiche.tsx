@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Bars, MonthLine } from '../components/charts'
@@ -8,8 +8,9 @@ import { PageHeader } from '../components/PageHeader'
 import { SPEED_LABELS } from '../components/format'
 import { PHASE_LABELS } from '../chess/phase'
 import { coachReport } from '../coach/insights'
+import { refreshDerived } from '../puzzles/repo'
 import { db } from '../db/schema'
-import type { Analysis, Color, Speed } from '../import/types'
+import type { Color, Speed } from '../import/types'
 import { openingStats } from '../openings/stats'
 import {
   END_LABELS,
@@ -118,10 +119,14 @@ const scoreSub = (s: Score) => `${s.games} partite · +${s.wins} =${s.draws} −
  * results by rating gap, time of day and previous result, openings by color.
  */
 export function Statistiche() {
+  // Brings the per-game facts up to date with any new analysis (cheap when none).
+  useEffect(() => {
+    void refreshDerived(db)
+  }, [])
   const [params] = useSearchParams()
   const data = useLiveQuery(async () => ({
     games: await db.games.toArray(),
-    analyses: await db.analyses.toArray(),
+    facts: await db.gameFacts.toArray(),
     puzzles: await db.puzzles.toArray(),
     exits: await db.feedback.where('status').equals('info').toArray(),
     openFeedback: await db.feedback.where('status').equals('open').count(),
@@ -149,8 +154,8 @@ export function Statistiche() {
       { ...(sp ? { speed: sp } : {}), ...(months ? { months: Number(months) } : {}) },
       now,
     )
-    const analyses = new Map<string, Analysis>(data.analyses.map((a) => [a.id, a]))
-    const analyzed = games.filter((g) => analyses.has(g.id)).length
+    const facts = new Map(data.facts.map((f) => [f.id, f]))
+    const analyzed = games.filter((g) => facts.has(g.id)).length
     // Training starts with the first repertoire or the first review, whichever came first.
     const firstTraining = Math.min(
       ...[...data.reps.values()].map((r) => r.createdAt),
@@ -159,13 +164,13 @@ export function Statistiche() {
     return {
       progress: monthlyProgress(
         sp ? data.games.filter((g) => g.speed === sp) : data.games,
-        analyses,
+        facts,
         data.exits,
       ),
       start: startMonth(Number.isFinite(firstTraining) ? firstTraining : undefined),
       coach: coachReport({
         games: data.games,
-        analyses,
+        facts,
         puzzles: data.puzzles,
         exits: data.exits,
         reps: data.reps,
@@ -175,8 +180,8 @@ export function Statistiche() {
       games,
       analyzed,
       total: scoreOf(games.map((g) => g.result)),
-      time: timeStats(games, analyses),
-      phases: errorsByPhase(games, analyses),
+      time: timeStats(games, facts),
+      phases: errorsByPhase(games, facts),
       ends: endings(games),
       gaps: scoreByRatingGap(games),
       parts: scoreByDayPart(games),

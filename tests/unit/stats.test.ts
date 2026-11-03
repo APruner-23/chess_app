@@ -11,6 +11,7 @@ import {
   scoreByRatingGap,
   scoreOf,
 } from '../../src/stats/games'
+import { factsMap } from '../../src/analysis/facts'
 import { errorsByPhase, parseTimeControl, plyTimes, timeStats } from '../../src/stats/time'
 import { fixtureJson, ndjsonLines } from '../helpers'
 
@@ -22,6 +23,8 @@ const chesscom = fixtureJson<{ games: ChesscomGame[] }>('chesscom/alepruner-2026
   .filter((g) => g !== undefined)
   .map((g) => g.game)
 const analyses = new Map<string, Analysis>(lichess.map((g) => [g.game.id, g.analysis!]))
+const all0 = [...lichess.map((g) => g.game)]
+const facts = factsMap(all0, analyses)
 const all: Game[] = [...lichess.map((g) => g.game), ...chesscom]
 
 describe('game stats', () => {
@@ -89,7 +92,7 @@ describe('time stats', () => {
   })
 
   it('compares the user with the opponents and links time to errors', () => {
-    const s = timeStats(all, analyses)
+    const s = timeStats(all, facts)
     expect(s.games).toBeGreaterThan(50)
     expect(s.perMove[0]!.user).toBeGreaterThan(0)
     expect(s.clockLeft[0]!.user).toBeGreaterThan(0)
@@ -101,7 +104,7 @@ describe('time stats', () => {
   })
 
   it('counts errors by phase in analyzed games', () => {
-    const ph = errorsByPhase(all, analyses)
+    const ph = errorsByPhase(all, facts)
     expect(ph.map((p) => p.phase)).toEqual(['opening', 'middlegame', 'endgame'])
     expect(ph.reduce((n, p) => n + p.moves, 0)).toBeGreaterThan(50)
   })
@@ -110,7 +113,7 @@ describe('time stats', () => {
 describe('progress by month', () => {
   it('groups games by month with score, analyzed accuracy and trends', async () => {
     const { monthlyProgress, trend } = await import('../../src/stats/progress')
-    const rows = monthlyProgress(all, analyses, [])
+    const rows = monthlyProgress(all, facts, [])
     expect(rows.reduce((n, r) => n + r.games, 0)).toBe(all.length)
     expect(rows.map((r) => r.month)).toEqual([...rows.map((r) => r.month)].sort())
     const lichessMonth = rows.find((r) => r.month === '2025-12')!

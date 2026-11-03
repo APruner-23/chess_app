@@ -27,6 +27,10 @@ export const SYNC_STATE_SETTING = 'syncState'
 /** Settings that never leave the device. */
 /** Background analysis drains a phone's battery: each device decides (see analysisStore). */
 export const AUTO_ANALYZE_SETTING = 'autoAnalyze'
+/** Which analyses the local puzzle table was derived from (`refreshDerived`). */
+export const PUZZLE_SOURCES_SETTING = 'puzzleSources'
+/** Fingerprint of the inputs of the last feedback run on this device (`processFeedback`). */
+export const FEEDBACK_SOURCE_SETTING = 'feedbackSource'
 /** Identifies this device's activity rows. */
 export const DEVICE_ID_SETTING = 'deviceId'
 export const DEVICE_SETTINGS = new Set([
@@ -35,6 +39,8 @@ export const DEVICE_SETTINGS = new Set([
   SYNC_STATE_SETTING,
   AUTO_ANALYZE_SETTING,
   DEVICE_ID_SETTING,
+  PUZZLE_SOURCES_SETTING,
+  FEEDBACK_SOURCE_SETTING,
   // Appearance (components/appearance.ts): each device keeps its own.
   'theme',
   'boardTheme',

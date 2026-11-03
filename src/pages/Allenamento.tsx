@@ -15,7 +15,7 @@ import type { RepMove } from '../repertoire/types'
 import { hardCards, trainingStats } from '../training/cards'
 import { ENDGAMES } from '../endgames/catalog'
 import { endgamesToday } from '../endgames/session'
-import { rebuildPuzzles } from '../puzzles/repo'
+import { refreshDerived } from '../puzzles/repo'
 import { puzzleStats } from '../puzzles/session'
 import { MOTIF_LABELS, type Motif } from '../puzzles/motifs'
 import type { Puzzle, PuzzleProgress } from '../puzzles/types'
@@ -40,7 +40,7 @@ export function Allenamento() {
   const [drillRep, setDrillRep] = useState('')
   useEffect(() => {
     void syncAllCards(db)
-    void rebuildPuzzles(db)
+    void refreshDerived(db)
   }, [])
   const data = useLiveQuery(async () => ({
     cards: await db.cards.toArray(),

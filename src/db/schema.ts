@@ -1,3 +1,4 @@
+import type { GameFacts } from '../analysis/facts'
 import type { ActivityDay } from '../training/activity'
 import type { Puzzle, PuzzleProgress } from '../puzzles/types'
 import Dexie, { type Table } from 'dexie'
@@ -76,6 +77,7 @@ export class ChessDb extends Dexie {
   puzzleProgress!: Table<PuzzleProgress, string>
   endgameProgress!: Table<PuzzleProgress, string>
   activity!: Table<ActivityDay, string>
+  gameFacts!: Table<GameFacts, string>
 
   constructor(name = 'chess_app') {
     super(name)
@@ -111,6 +113,14 @@ export class ChessDb extends Dexie {
     })
     this.version(8).stores({
       activity: 'id, day',
+    })
+    // updatedAt lets the puzzle rebuild see which analyses changed without loading them.
+    this.version(9).stores({
+      analyses: 'id, updatedAt',
+    })
+    // Local cache derived from analyses (see analysis/facts.ts).
+    this.version(10).stores({
+      gameFacts: 'id',
     })
   }
 }

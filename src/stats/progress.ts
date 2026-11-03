@@ -1,7 +1,7 @@
-import { judgeMoves } from '../analysis/judgments'
-import { MIN_BOOK_PLIES, userAccuracy } from '../feedback/stats'
+import type { GameFacts } from '../analysis/facts'
+import { MIN_BOOK_PLIES } from '../feedback/stats'
 import type { FeedbackItem } from '../feedback/types'
-import type { Analysis, Game } from '../import/types'
+import type { Game } from '../import/types'
 
 export interface MonthRow {
   /** "2026-09" */
@@ -55,7 +55,7 @@ function monthRange(first: string, last: string): string[] {
  */
 export function monthlyProgress(
   games: readonly Game[],
-  analyses: ReadonlyMap<string, Analysis>,
+  facts: ReadonlyMap<string, GameFacts>,
   exits: readonly FeedbackItem[],
   months = 18,
 ): MonthRow[] {
@@ -76,18 +76,11 @@ export function monthlyProgress(
       let moves = 0
       let errors = 0
       for (const g of list) {
-        const a = analyses.get(g.id)
-        if (!a) continue
-        const acc = userAccuracy(g, a)
-        if (acc !== undefined) accs.push(acc)
-        const parity = g.userColor === 'white' ? 0 : 1
-        moves += a.plies.filter((_, i) => i % 2 === parity).length
-        const judged =
-          a.source === 'lichess' ? (p: number) => a.plies[p]!.best !== undefined : undefined
-        errors += judgeMoves(
-          a.plies.map((p) => p.eval),
-          judged,
-        ).filter((x) => x.ply % 2 === parity && x.judgment !== 'inaccuracy').length
+        const f = facts.get(g.id)
+        if (!f) continue
+        if (f.accuracy !== undefined) accs.push(f.accuracy)
+        moves += f.userMoves
+        errors += f.errorPlies.length
       }
       const pts = list.reduce(
         (a, g) => a + (g.result === 'win' ? 1 : g.result === 'draw' ? 0.5 : 0),

@@ -105,6 +105,11 @@ describe('feedback storage', () => {
     expect(await processFeedback(db)).toBe(1)
     const hole = (await db.feedback.where('status').equals('open').toArray())[0]!
     expect(hole.kind).toBe('hole')
+    // Nothing changed: a second pass writes nothing (each write wakes the live queries).
+    const before = (await db.feedback.toArray()).map((f) => f.updatedAt)
+    await new Promise((r) => setTimeout(r, 5))
+    await processFeedback(db)
+    expect((await db.feedback.toArray()).map((f) => f.updatedAt)).toEqual(before)
     await ignore(db, [hole])
     expect(await processFeedback(db)).toBe(0)
     expect((await db.feedback.get(hole.id))!.status).toBe('ignored')

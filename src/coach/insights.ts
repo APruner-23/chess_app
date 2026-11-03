@@ -1,7 +1,8 @@
 import { PHASE_LABELS } from '../chess/phase'
 import { lineStats } from '../feedback/stats'
 import type { FeedbackItem } from '../feedback/types'
-import type { Analysis, Color, Game, Speed } from '../import/types'
+import type { GameFacts } from '../analysis/facts'
+import type { Color, Game, Speed } from '../import/types'
 import { openingKey, UNKNOWN_OPENING } from '../openings/stats'
 import { MOTIF_ADVICE, MOTIF_LABELS, type Motif } from '../puzzles/motifs'
 import type { Puzzle } from '../puzzles/types'
@@ -24,7 +25,8 @@ export interface Insight {
 
 export interface CoachInput {
   games: readonly Game[]
-  analyses: ReadonlyMap<string, Analysis>
+  /** Per-game facts of the analyzed games (`gameFacts`). */
+  facts: ReadonlyMap<string, GameFacts>
   puzzles: readonly Puzzle[]
   exits: readonly FeedbackItem[]
   reps: ReadonlyMap<string, Repertoire>
@@ -71,7 +73,7 @@ export function coachReport(input: CoachInput): CoachReport {
   const recent = filterGames(input.games, { months: 12 }, input.now)
   const games = recent.length >= MIN_GAMES ? recent : [...input.games]
   const ids = new Set(games.map((g) => g.id))
-  const analyzedGames = games.filter((g) => input.analyses.has(g.id))
+  const analyzedGames = games.filter((g) => input.facts.has(g.id))
   const total = games.length
   const out: Insight[] = []
   const strengths: Insight[] = []
@@ -84,7 +86,7 @@ export function coachReport(input: CoachInput): CoachReport {
     if (g.speed !== 'daily') speeds.set(g.speed, [...(speeds.get(g.speed) ?? []), g])
   for (const [speed, list] of speeds) {
     if (list.length < 30) continue
-    const t = timeStats(list, input.analyses)
+    const t = timeStats(list, input.facts)
     const share = list.length / total
     if (t.losses >= 5 && t.lostOnTime / list.length >= 0.05) {
       const first = t.perMove[0]
@@ -151,7 +153,7 @@ export function coachReport(input: CoachInput): CoachReport {
   // Phases: one much worse than the middlegame. Its cost is the share of all errors
   // that it adds beyond the middlegame rate.
   if (analyzedGames.length >= MIN_ANALYZED) {
-    const phases = errorsByPhase(games, input.analyses)
+    const phases = errorsByPhase(games, input.facts)
     const mid = phases.find((p) => p.phase === 'middlegame')!
     const allErrors = phases.reduce((a, p) => a + ((p.errorsPer100 ?? 0) * p.moves) / 100, 0)
     for (const p of phases) {
